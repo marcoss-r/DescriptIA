@@ -35,6 +35,16 @@ document.addEventListener("DOMContentLoaded", () => {
   mostrarPantalla("inicio");
 });
 
+// Registra el service worker (permite instalarla como app y jugar sin conexión).
+// Solo funciona sobre http(s), no al abrir el archivo directamente (file://).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      /* si falla, la app sigue funcionando igual, solo sin offline */
+    });
+  });
+}
+
 // Botones "Atrás" (cualquier botón con data-volver).
 function conectarNavegacionGenerica() {
   document.querySelectorAll("[data-volver]").forEach((boton) => {
