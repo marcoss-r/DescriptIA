@@ -1,0 +1,646 @@
+/* ==========================================================
+   Variables de tema (tokens de color) — oscuro azulado
+   ========================================================== */
+:root {
+  --color-fondo: #0b1120;
+  --color-fondo-alt: #131c31;
+  --color-superficie: #1a2540;
+  --color-texto: #e8edf9;
+  --color-texto-tenue: #93a1c0;
+  --color-acento: #4c7dff;
+  --color-acento-oscuro: #2d52c9;
+  --color-exito: #34c759;
+  --color-fallo: #ff4d4f;
+
+  --radio-borde: 18px;
+  --radio-borde-chico: 10px;
+
+  --duracion-transicion: 320ms;
+  --curva-transicion: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================
+   Base: layout a pantalla completa, sin scroll
+   ========================================================== */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-fondo) 0%, var(--color-fondo-alt) 100%);
+}
+
+/* ==========================================================
+   Pantallas (patrón SPA): todas ocupan el mismo hueco,
+   solo la que tiene .activa es visible/interactiva.
+   ========================================================== */
+.pantalla {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition: opacity var(--duracion-transicion) var(--curva-transicion),
+    transform var(--duracion-transicion) var(--curva-transicion),
+    visibility 0s linear var(--duracion-transicion);
+}
+
+.pantalla.activa {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition: opacity var(--duracion-transicion) var(--curva-transicion),
+    transform var(--duracion-transicion) var(--curva-transicion),
+    visibility 0s linear 0s;
+}
+
+/* Pantallas con scroll permitido (p. ej. resúmenes) */
+.pantalla.con-scroll {
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+.pantalla h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--color-texto);
+}
+
+.pantalla p {
+  margin: 0;
+  color: var(--color-texto-tenue);
+  max-width: 32ch;
+}
+
+/* ==========================================================
+   Botones
+   ========================================================== */
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radio-borde);
+  padding: 0.9rem 1.6rem;
+  min-height: 48px;
+  background: var(--color-acento);
+  color: #fff;
+  font-weight: 600;
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+button:hover {
+  background: var(--color-acento-oscuro);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  background: var(--color-superficie);
+  color: var(--color-texto-tenue);
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.boton-exito {
+  background: var(--color-exito);
+}
+
+button.boton-fallo {
+  background: var(--color-fallo);
+}
+
+button.secundario {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+button.secundario:hover {
+  background: var(--color-fondo-alt);
+}
+
+/* ==========================================================
+   Formularios de configuración (Fase 3)
+   ========================================================== */
+
+/* Fila de botones al pie de una pantalla */
+.fila-botones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 26rem;
+}
+
+.fila-botones button {
+  flex: 1 1 auto;
+}
+
+/* Texto de error (rojo) y de ayuda (tenue) */
+.error {
+  color: var(--color-fallo);
+  min-height: 1.2em;
+  font-size: 0.9rem;
+}
+
+.ayuda {
+  color: var(--color-texto-tenue);
+  min-height: 1.2em;
+  font-size: 0.9rem;
+}
+
+/* Contenedor de lista con scroll interno (para que la pantalla no crezca) */
+.lista-scroll {
+  width: 100%;
+  max-width: 26rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem;
+}
+
+/* Campo con input de texto */
+.campo input {
+  width: 100%;
+  font: inherit;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radio-borde-chico);
+  border: 1px solid transparent;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  min-height: 48px;
+}
+
+.campo input::placeholder {
+  color: var(--color-texto-tenue);
+}
+
+.campo input:focus {
+  outline: none;
+  border-color: var(--color-acento);
+}
+
+/* Stepper (− valor +) */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stepper-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.stepper-valor {
+  font-size: 2rem;
+  font-weight: 700;
+  min-width: 2ch;
+  text-align: center;
+}
+
+/* Reparto de equipos */
+.grupo-equipo {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+}
+
+.grupo-equipo-titulo {
+  font-weight: 700;
+  color: var(--color-acento);
+  margin-bottom: 0.35rem;
+}
+
+.chip-jugador {
+  display: inline-block;
+  background: var(--color-fondo-alt);
+  color: var(--color-texto);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  margin: 0.15rem 0.15rem 0 0;
+  font-size: 0.85rem;
+}
+
+/* Opciones de categoría (checkbox) */
+.opcion-categoria {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+
+.opcion-categoria input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-acento);
+}
+
+.opcion-categoria-texto {
+  flex: 1;
+  text-align: left;
+}
+
+.opcion-categoria-cuenta {
+  color: var(--color-texto-tenue);
+  font-size: 0.85rem;
+}
+
+/* Resumen de la pantalla provisional "listo" */
+.resumen-listo {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde);
+  padding: 1rem 1.25rem;
+  max-width: 26rem;
+  text-align: left;
+}
+
+.resumen-listo p {
+  margin: 0.35rem 0;
+  color: var(--color-texto);
+  max-width: none;
+}
+
+/* ==========================================================
+   Pantalla "prepárate" (aviso de turno)
+   ========================================================== */
+.prep-ronda {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-acento);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prep-jugador {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.prep-equipo {
+  color: var(--color-texto-tenue);
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.pantalla[data-pantalla="preparado"] .prep-jugador {
+  animation: aparecer-tarjeta 300ms var(--curva-transicion);
+}
+
+/* ==========================================================
+   Pantalla de juego (Fase 5)
+   ========================================================== */
+.pantalla[data-pantalla="juego"] {
+  justify-content: space-between;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.juego-cabecera {
+  width: 100%;
+}
+
+.juego-ronda {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-acento);
+}
+
+.juego-turno {
+  color: var(--color-texto-tenue);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.juego-timer {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tarjeta grande con la palabra a adivinar */
+.tarjeta {
+  width: 100%;
+  max-width: 26rem;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 2rem 1.5rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde);
+}
+
+.tarjeta-categoria {
+  color: var(--color-texto-tenue);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tarjeta-texto {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.tarjeta.aparece {
+  animation: aparecer-tarjeta 260ms var(--curva-transicion);
+}
+
+@keyframes aparecer-tarjeta {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Botones ✓ / ✗ */
+.juego-botones {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 26rem;
+}
+
+.boton-grande {
+  flex: 1;
+  font-size: 2rem;
+  padding: 1rem;
+  min-height: 72px;
+}
+
+/* ==========================================================
+   Resumen de la minironda (Fase 6)
+   ========================================================== */
+.lista-resumen {
+  max-height: 55vh;
+}
+
+.resumen-tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.5rem 0.6rem;
+}
+
+.resumen-tarjeta-centro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  min-width: 0;
+}
+
+.resumen-tarjeta-texto {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resumen-tarjeta-cat {
+  font-size: 0.75rem;
+  color: var(--color-texto-tenue);
+}
+
+/* Mini-botones ✓ / ✗ de cada tarjeta: atenuados por defecto, resaltados si están seleccionados */
+.mini-btn {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  flex: 0 0 auto;
+  background: var(--color-fondo-alt);
+  color: var(--color-texto-tenue);
+  opacity: 0.5;
+  transition: opacity 120ms ease, background-color 120ms ease, transform 100ms ease;
+}
+
+.mini-btn.seleccionado {
+  opacity: 1;
+  color: #fff;
+}
+
+.mini-verde.seleccionado {
+  background: var(--color-exito);
+}
+
+.mini-rojo.seleccionado {
+  background: var(--color-fallo);
+}
+
+.mini-btn:hover {
+  opacity: 0.85;
+}
+
+.mini-btn.seleccionado:hover {
+  opacity: 1;
+}
+
+/* ==========================================================
+   Podio / pantalla final (Fase 8)
+   ========================================================== */
+.podio-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  border-left: 5px solid transparent;
+  padding: 0.7rem 1rem;
+}
+
+.podio-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.podio-medalla {
+  font-size: 1.4rem;
+  width: 1.6em;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.podio-nombre {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.podio-aciertos {
+  font-weight: 700;
+  font-size: 1.2rem;
+  flex: 0 0 auto;
+}
+
+/* Colores por medalla (el resto queda sin color) */
+.podio-oro {
+  border-left-color: #ffce54;
+  background: linear-gradient(90deg, rgba(255, 206, 84, 0.18), var(--color-superficie) 60%);
+}
+
+.podio-plata {
+  border-left-color: #cbd5e1;
+  background: linear-gradient(90deg, rgba(203, 213, 225, 0.15), var(--color-superficie) 60%);
+}
+
+.podio-bronce {
+  border-left-color: #d08b52;
+  background: linear-gradient(90deg, rgba(208, 139, 82, 0.15), var(--color-superficie) 60%);
+}
+
+.podio-resto .podio-medalla {
+  color: var(--color-texto-tenue);
+}
+
+/* ==========================================================
+   Gestión de categorías y tarjetas
+   ========================================================== */
+
+/* Fila de categoría: botón que abre + botón de borrar */
+.fila-categoria {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fila-categoria .item-lista {
+  flex: 1;
+  width: auto;
+}
+
+/* Botón de categoría en la lista */
+.item-lista {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: 100%;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.85rem 1rem;
+  text-align: left;
+}
+
+.item-lista:hover {
+  background: var(--color-fondo-alt);
+}
+
+.item-lista-texto {
+  font-weight: 600;
+}
+
+/* Tarjeta en modo vista (solo lectura) */
+.item-tarjeta {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+}
+
+/* Fila en modo edición: input + botón */
+.fila-editar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fila-editar input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radio-borde-chico);
+  border: 1px solid transparent;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  min-height: 44px;
+}
+
+.fila-editar input::placeholder {
+  color: var(--color-texto-tenue);
+}
+
+.fila-editar input:focus {
+  outline: none;
+  border-color: var(--color-acento);
+}
+
+.fila-anadir input {
+  border-color: var(--color-acento);
+  background: var(--color-fondo-alt);
+}
+
+.mini-btn.mini-borrar {
+  opacity: 1;
+  background: var(--color-fallo);
+  color: #fff;
+}
+
+.boton-anadir {
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  flex: 0 0 auto;
+  background: var(--color-exito);
+}

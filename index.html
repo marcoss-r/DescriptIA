@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>DescriptIA</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Inicio -->
+    <section class="pantalla" data-pantalla="inicio">
+      <h1>DescriptIA</h1>
+      <p>Un juego de describir y adivinar por equipos.</p>
+      <button type="button" id="btn-continuar" hidden>Continuar partida</button>
+      <button type="button" id="btn-nueva-partida">Nueva partida</button>
+      <button type="button" id="btn-categorias-menu" class="secundario">Categorías</button>
+    </section>
+
+    <!-- Gestión de categorías: lista de categorías -->
+    <section class="pantalla" data-pantalla="categorias-lista">
+      <h1>Categorías</h1>
+      <p class="ayuda">Toca una para ver y editar sus tarjetas.</p>
+      <div class="fila-editar fila-anadir">
+        <input type="text" id="input-nueva-categoria" placeholder="Nueva categoría…" maxlength="30" />
+        <button type="button" class="boton-anadir" id="btn-anadir-categoria">＋</button>
+      </div>
+      <p class="error" id="lista-cat-error"></p>
+      <div class="lista-scroll" id="lista-categorias-gestion"></div>
+      <button type="button" class="secundario" data-volver="inicio">Atrás</button>
+    </section>
+
+    <!-- Gestión de categorías: tarjetas de una categoría (ver / editar) -->
+    <section class="pantalla" data-pantalla="categoria-detalle">
+      <h1 id="detalle-titulo"></h1>
+      <div class="lista-scroll" id="detalle-tarjetas"></div>
+      <p class="error" id="detalle-error"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" id="btn-detalle-atras">Atrás</button>
+        <button type="button" id="btn-editar-categoria">Editar</button>
+      </div>
+    </section>
+
+    <!-- Configuración: número y nombres de jugadores -->
+    <section class="pantalla" data-pantalla="config-jugadores">
+      <h1>Jugadores</h1>
+      <p>¿Cuántos jugáis?</p>
+      <div class="stepper" data-stepper="jugadores">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="valor-num-jugadores">4</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Escribe sus nombres:</p>
+      <div class="lista-scroll" id="lista-nombres-jugadores"></div>
+      <p class="error" id="error-jugadores"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="inicio">Atrás</button>
+        <button type="button" id="btn-jugadores-siguiente">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- Configuración: número de equipos y reparto -->
+    <section class="pantalla" data-pantalla="config-equipos">
+      <h1>Equipos</h1>
+      <p>¿Cuántos equipos?</p>
+      <div class="stepper" data-stepper="equipos">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="valor-num-equipos">2</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p class="ayuda" id="ayuda-equipos"></p>
+      <p>Reparto al azar:</p>
+      <div class="lista-scroll" id="reparto-equipos"></div>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="config-jugadores">Atrás</button>
+        <button type="button" id="btn-rebarajar">🔀 Rebarajar</button>
+        <button type="button" id="btn-equipos-siguiente">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- Configuración: nombres de los equipos -->
+    <section class="pantalla" data-pantalla="config-nombres-equipos">
+      <h1>Nombre de los equipos</h1>
+      <div class="lista-scroll" id="lista-nombres-equipos"></div>
+      <p class="error" id="error-nombres-equipos"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="config-equipos">Atrás</button>
+        <button type="button" id="btn-nombres-equipos-siguiente">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- Configuración: categorías -->
+    <section class="pantalla" data-pantalla="config-categorias">
+      <h1>Categorías</h1>
+      <p>Elige al menos una:</p>
+      <div class="lista-scroll" id="lista-categorias"></div>
+      <p class="error" id="error-categorias"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="config-nombres-equipos">Atrás</button>
+        <button type="button" id="btn-categorias-siguiente">Empezar</button>
+      </div>
+    </section>
+
+    <!-- Confirmación de que la partida está lista -->
+    <section class="pantalla" data-pantalla="listo">
+      <h1>¡Partida lista! 🎉</h1>
+      <div class="resumen-listo" id="resumen-listo"></div>
+      <div class="fila-botones">
+        <button type="button" class="secundario" id="btn-reiniciar">Nueva partida</button>
+        <button type="button" id="btn-empezar-juego">Empezar a jugar</button>
+      </div>
+    </section>
+
+    <!-- Aviso de "prepárate" antes de empezar el turno -->
+    <section class="pantalla" data-pantalla="preparado">
+      <div class="prep-ronda" id="prep-ronda"></div>
+      <p class="ayuda">Pásale el móvil a…</p>
+      <div class="prep-jugador" id="prep-jugador"></div>
+      <div class="prep-equipo" id="prep-equipo"></div>
+      <button type="button" id="btn-empezar-turno">¡Empezar!</button>
+    </section>
+
+    <!-- Pantalla de juego (minironda) -->
+    <section class="pantalla" data-pantalla="juego">
+      <div class="juego-cabecera">
+        <div class="juego-ronda" id="juego-ronda"></div>
+        <div class="juego-turno" id="juego-turno"></div>
+      </div>
+      <div class="juego-timer" id="juego-timer">40</div>
+      <div class="tarjeta" id="tarjeta">
+        <div class="tarjeta-categoria" id="tarjeta-categoria"></div>
+        <div class="tarjeta-texto" id="tarjeta-texto"></div>
+      </div>
+      <div class="juego-botones">
+        <button type="button" class="boton-fallo boton-grande" id="btn-pasar">✗</button>
+        <button type="button" class="boton-exito boton-grande" id="btn-acierto">✓</button>
+      </div>
+    </section>
+
+    <!-- Provisional: pantalla final (el podio real llega en la Fase 8) -->
+    <section class="pantalla" data-pantalla="final">
+      <h1>Fin de la partida 🏁</h1>
+      <div class="lista-scroll" id="resultado-final"></div>
+      <button type="button" id="btn-final-nueva">Nueva partida</button>
+    </section>
+
+    <!-- Resumen de la minironda: corregible antes de confirmar -->
+    <section class="pantalla" data-pantalla="resumen-turno">
+      <h1>Fin del turno</h1>
+      <p class="ayuda" id="resumen-turno-jugador"></p>
+      <div class="lista-scroll lista-resumen" id="resumen-turno-datos"></div>
+      <button type="button" id="btn-confirmar-turno">Confirmar</button>
+    </section>
+
+  </div>
+
+  <script src="data/tarjetas.js"></script>
+  <script src="js/estado.js"></script>
+  <script src="js/datos.js"></script>
+  <script src="js/pantallas.js"></script>
+  <script src="js/juego.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
