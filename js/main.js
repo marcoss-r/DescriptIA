@@ -19,6 +19,7 @@ const cfg = {
 
 document.addEventListener("DOMContentLoaded", () => {
   conectarNavegacionGenerica();
+  conectarFiesta();
   conectarInicio();
   conectarPantallaJugadores();
   conectarPantallaEquipos();
@@ -32,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (cargarEstado()) {
     document.getElementById("btn-continuar").hidden = false;
   }
-  mostrarPantalla("inicio");
+  mostrarPantalla("fiesta");
 });
 
 // Registra el service worker (permite instalarla como app y jugar sin conexión).
@@ -50,6 +51,15 @@ function conectarNavegacionGenerica() {
   document.querySelectorAll("[data-volver]").forEach((boton) => {
     boton.addEventListener("click", () => mostrarPantalla(boton.dataset.volver));
   });
+}
+
+// ============================================================
+//  FIEsta (pantalla principal: elegir juego)
+// ============================================================
+function conectarFiesta() {
+  document
+    .getElementById("btn-juego-descriptia")
+    .addEventListener("click", () => mostrarPantalla("inicio"));
 }
 
 // ============================================================

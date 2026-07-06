@@ -104,6 +104,57 @@ body {
 }
 
 /* ==========================================================
+   FIEsta (pantalla principal: elegir juego)
+   ========================================================== */
+.fiesta-titulo {
+  font-size: 2.8rem !important;
+  letter-spacing: 0.02em;
+  background: linear-gradient(90deg, var(--color-acento), #a06bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lista-juegos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 26rem;
+  margin-top: 0.5rem;
+}
+
+/* Tarjeta-botón de cada juego */
+.juego-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 1.1rem 1.3rem;
+  text-align: left;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  border: 1px solid transparent;
+}
+
+.juego-card:hover {
+  background: var(--color-fondo-alt);
+  border-color: var(--color-acento);
+}
+
+.juego-card-nombre {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.juego-card-desc {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--color-texto-tenue);
+}
+
+/* ==========================================================
    Botones
    ========================================================== */
 button {

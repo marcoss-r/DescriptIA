@@ -19,13 +19,26 @@
 <body>
   <div id="app">
 
-    <!-- Inicio -->
+    <!-- FIEsta: pantalla principal, elige un juego -->
+    <section class="pantalla" data-pantalla="fiesta">
+      <h1 class="fiesta-titulo">FIEsta</h1>
+      <p>Elige un juego para empezar.</p>
+      <div class="lista-juegos">
+        <button type="button" class="juego-card" id="btn-juego-descriptia">
+          <span class="juego-card-nombre">DescriptIA</span>
+          <span class="juego-card-desc">Describe y adivina por equipos</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Inicio de DescriptIA -->
     <section class="pantalla" data-pantalla="inicio">
       <h1>DescriptIA</h1>
       <p>Un juego de describir y adivinar por equipos.</p>
       <button type="button" id="btn-continuar" hidden>Continuar partida</button>
       <button type="button" id="btn-nueva-partida">Nueva partida</button>
       <button type="button" id="btn-categorias-menu" class="secundario">Categorías</button>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
     <!-- Gestión de categorías: lista de categorías -->
