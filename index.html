@@ -65,6 +65,10 @@
           <span class="juego-card-nombre">DescriptIA</span>
           <span class="juego-card-desc">Describe y adivina por equipos</span>
         </button>
+        <button type="button" class="juego-card" id="btn-juego-cartas">
+          <span class="juego-card-nombre">Cartas de la Fortuna</span>
+          <span class="juego-card-desc">Roba una carta y cumple su efecto</span>
+        </button>
       </div>
     </section>
 
@@ -213,10 +217,47 @@
       <button type="button" id="btn-confirmar-turno">Confirmar</button>
     </section>
 
+    <!-- ======================================================= -->
+    <!--  Cartas de la Fortuna (esqueleto — Fase 1)              -->
+    <!-- ======================================================= -->
+
+    <!-- Configuración de jugadores (2–10) -->
+    <section class="pantalla" data-pantalla="cf-config">
+      <h1>Cartas de la Fortuna</h1>
+      <p>¿Cuántos jugáis?</p>
+      <div class="stepper" data-stepper="cf-jugadores">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="cf-valor-num-jugadores">4</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Escribe sus nombres:</p>
+      <div class="lista-scroll" id="cf-lista-nombres"></div>
+      <p class="error" id="cf-error-jugadores"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" id="cf-btn-empezar">Empezar</button>
+      </div>
+    </section>
+
+    <!-- Pantalla de juego: mazo, revelado y turnos (se completa en la Fase 4) -->
+    <section class="pantalla" data-pantalla="cf-juego">
+      <h1>Juego</h1>
+      <p>Aquí irá el mazo y el revelado de cartas (Fase 4).</p>
+      <button type="button" class="secundario" data-volver="cf-config">Atrás</button>
+    </section>
+
+    <!-- Fin de la partida: se acaba el mazo -->
+    <section class="pantalla" data-pantalla="cf-fin">
+      <h1>Se acabó el mazo 🎉</h1>
+      <!-- Al acabarse el mazo, volver al hub (data-volver navega solo, sin JS). -->
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
   </div>
 
   <!-- Núcleo compartido -->
   <script src="js/nucleo/pantallas.js"></script>
+  <script src="js/nucleo/util.js"></script>
 
   <!-- DescriptIA -->
   <script src="data/descriptia/tarjetas.js"></script>
@@ -224,6 +265,9 @@
   <script src="js/descriptia/datos.js"></script>
   <script src="js/descriptia/juego.js"></script>
   <script src="js/descriptia/main.js"></script>
+
+  <!-- Cartas de la Fortuna -->
+  <script src="js/cartas/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
   <script src="js/nucleo/arranque.js"></script>

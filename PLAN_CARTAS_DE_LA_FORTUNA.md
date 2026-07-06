@@ -48,9 +48,12 @@ site.webmanifest      ← nombre/iconos de la PWA (FIEsta)
 sw.js                 ← service worker (offline); subir CACHE al cambiar archivos
 css/estilos.css       ← estilos + tokens de color (compartido)
 icons/                ← icono.svg (favicon), icon-180/192/512.png, generar_icono.py
+img/
+  cartas/             ← reverso.png + 40 cartas (pixel art) + generar_cartas.py
 js/
   nucleo/             ← COMÚN a todos los juegos
     pantallas.js      ← mostrarPantalla(nombre): patrón SPA
+    util.js           ← utilidades compartidas (p. ej. barajar / Fisher–Yates)
     arranque.js       ← conectarNavegacionGenerica, arranque (muestra el hub), service worker
   descriptia/         ← juego DescriptIA
     estado.js         ← estado + persistencia en localStorage
@@ -88,8 +91,8 @@ Cada juego registra su propio wiring con su `document.addEventListener("DOMConte
   Ver pantalla de jugadores/equipos de DescriptIA en `index.html` + `js/descriptia/main.js`.
 - **Lista de inputs de nombres**: patrón `sincronizarJugadores()` + `renderNombresJugadores()`
   en `js/descriptia/main.js` (mantiene un array sincronizado con el nº elegido, conservando lo escrito).
-- **Barajar**: existe una función `barajar(array)` (usada en el reparto de equipos).
-  Reutilizarla para orden de jugadores y para el mazo.
+- **Barajar**: función `barajar(array)` en `js/nucleo/util.js` (Fisher–Yates, devuelve
+  una copia). Compartida; se usa para el orden de jugadores y para el mazo.
 - **Persistencia**: `guardarEstado()/cargarEstado()/borrarEstado()/reiniciarEstado()`
   sobre `localStorage` (patrón a imitar si se quiere reanudar partida).
 
@@ -259,4 +262,14 @@ La pantalla `cf-juego` completa.
 - ✅ **Reorganización por carpetas hecha** (ver estructura arriba): `js/nucleo/`,
   `js/descriptia/`, `data/descriptia/`. El núcleo arranca la app y muestra el hub;
   cada juego registra su propio wiring.
-- ⏳ «Cartas de la Fortuna» todavía **no existe** → Fases 1–4 (siguiente: Fase 1).
+- ✅ **Fase 1 hecha**: tarjeta en el hub, pantallas `cf-config/cf-juego/cf-fin`,
+  `js/cartas/main.js` con `cfEstado` y navegación.
+- ✅ **Fase 2 hecha**: pantalla `cf-config` (stepper 2–10 + nombres), validación y orden
+  de turno barajado; `barajar` movido a `js/nucleo/util.js`. (TODOs 2.1 y 2.2 completados.)
+- ✅ **Fase 3 — arte de cartas hecho**: reverso (bordes blancos, interior azul, mini
+  estrellas de 4 puntas) + las 40 cartas en pixel art en `img/cartas/`, generadas con
+  `img/cartas/generar_cartas.py` (ases sencillos). Nombres: `<palo>-<1..7|sota|caballo|rey>.png`
+  y `reverso.png`. `_contacto.png` es solo hoja de revisión (no la usa la app).
+- ⏳ **Pendiente de Fase 3**: el MODELO DE DATOS de la baraja (`data/cartas/efectos.js`:
+  10 efectos por valor + construir/​barajar/​robar el mazo en `cfEstado`). Aún sin hacer.
+- ⏳ Siguiente: terminar modelo de baraja + Fase 4 (pantalla de juego que enseñe estas imágenes).

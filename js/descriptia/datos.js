@@ -103,16 +103,6 @@ function eliminarTarjeta(categoria, indice) {
   guardarBanco();
 }
 
-// Fisher–Yates: devuelve una COPIA de la lista en orden aleatorio.
-function barajar(lista) {
-  const copia = lista.slice();
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copia[i], copia[j]] = [copia[j], copia[i]];
-  }
-  return copia;
-}
-
 function crearTarjeta(texto, categoria, id) {
   return { id: `t${id}`, texto, categoria };
 }
