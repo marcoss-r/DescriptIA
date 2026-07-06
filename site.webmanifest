@@ -1,7 +1,7 @@
 {
-  "name": "DescriptIA",
-  "short_name": "DescriptIA",
-  "description": "Juego de describir y adivinar por equipos.",
+  "name": "FIEsta",
+  "short_name": "FIEsta",
+  "description": "Colección de juegos de fiesta por turnos.",
   "lang": "es",
   "start_url": "./index.html",
   "scope": "./",

@@ -28,52 +28,66 @@ por él (ver memoria `feedback_no_probar_navegador`).
 
 ### Metodología de trabajo (lo que pide el usuario)
 - Desarrollo **por fases**. El usuario indica cuándo se avanza de fase.
-- Cada fase tiene **un par de TODOs pensados para aprender**.
-- **Al empezar cada fase**, el asistente debe **explicar los conceptos necesarios
-  para cada TODO** antes/durante la implementación, de forma didáctica, y guiar al
-  usuario. El objetivo es que el usuario aprenda, no solo que el código funcione.
+- **El usuario aprende implementando él.** En cada fase el asistente hace **el
+  esqueleto/andamiaje** y **deja huecos con comentarios `// TODO`** para que el usuario
+  los complete; cada `// TODO` va acompañado de **una explicación** de qué hay que hacer
+  y por qué. No entregar la solución completa: dejar que el usuario escriba esa parte.
+  (Ver memoria `dejar-todos-al-usuario`.)
+- **Al empezar cada fase**, explicar primero los conceptos necesarios, de forma didáctica.
+- Excepción puntual: tareas de reorganización/infraestructura las hace el asistente
+  entero (sin TODOs) cuando el usuario lo pida.
 
 ---
 
 ## 2. Arquitectura actual (para reutilizar patrones)
 
-### Estructura de ficheros
+### Estructura de ficheros (reorganizada por juego)
 ```
 index.html            ← todas las pantallas (secciones .pantalla) + orden de <script>
-site.webmanifest      ← nombre/iconos de la PWA
-sw.js                 ← service worker (offline)
-css/estilos.css       ← estilos + tokens de color
-icons/                ← icon-180.png, icon-192.png, icon-512.png
+site.webmanifest      ← nombre/iconos de la PWA (FIEsta)
+sw.js                 ← service worker (offline); subir CACHE al cambiar archivos
+css/estilos.css       ← estilos + tokens de color (compartido)
+icons/                ← icono.svg (favicon), icon-180/192/512.png, generar_icono.py
 js/
-  pantallas.js        ← mostrarPantalla(nombre): patrón SPA (común a todos los juegos)
-  estado.js           ← estado de DescriptIA + persistencia en localStorage
-  datos.js            ← helpers del banco de tarjetas de DescriptIA
-  juego.js            ← lógica de juego de DescriptIA
-  main.js             ← arranque, wiring de botones, hub FIEsta, asistente de config
+  nucleo/             ← COMÚN a todos los juegos
+    pantallas.js      ← mostrarPantalla(nombre): patrón SPA
+    arranque.js       ← conectarNavegacionGenerica, arranque (muestra el hub), service worker
+  descriptia/         ← juego DescriptIA
+    estado.js         ← estado + persistencia en localStorage
+    datos.js          ← helpers del banco de tarjetas
+    juego.js          ← lógica de juego
+    main.js           ← wiring de sus pantallas + entrada desde el hub
+  cartas/             ← (se crea en la Fase 1) «Cartas de la Fortuna»
 data/
-  tarjetas.js/.json   ← contenido de DescriptIA
+  descriptia/         ← tarjetas.js/.json + agregar_tarjeta.py
+  cartas/             ← (Fase 3) contenido de «Cartas de la Fortuna»
 ```
+
+**Orden de `<script>` en index.html:** `nucleo/pantallas.js` → (por cada juego: sus
+datos y sus `js`) → `nucleo/arranque.js` **al final** (es quien muestra el hub).
+Cada juego registra su propio wiring con su `document.addEventListener("DOMContentLoaded", …)`.
 
 ### Patrón SPA de pantallas (clave, se reutiliza)
 - Cada pantalla es `<section class="pantalla" data-pantalla="NOMBRE">` dentro de `#app`.
 - Solo la que tiene la clase `.activa` es visible. Se cambia con:
   ```js
-  mostrarPantalla("NOMBRE"); // js/pantallas.js
+  mostrarPantalla("NOMBRE"); // js/nucleo/pantallas.js
   ```
 - Botones «Atrás»: cualquier botón con `data-volver="NOMBRE"` navega solo
-  (ver `conectarNavegacionGenerica()` en `main.js`).
+  (ver `conectarNavegacionGenerica()` en `js/nucleo/arranque.js`).
 
 ### Hub FIEsta (ya existe)
 - Pantalla `data-pantalla="fiesta"`: título + `.lista-juegos` con tarjetas-botón
   `.juego-card`. La de DescriptIA ya está y lleva a `data-pantalla="inicio"`.
-- La app arranca en `mostrarPantalla("fiesta")` (en `main.js`, `DOMContentLoaded`).
-- Para añadir un juego nuevo al hub: otra `.juego-card` + su pantalla + su wiring.
+- La app arranca en `mostrarPantalla("fiesta")` (en `js/nucleo/arranque.js`, `DOMContentLoaded`).
+- Para añadir un juego nuevo al hub: otra `.juego-card` + su pantalla + su wiring
+  (la entrada al juego se engancha desde el `main.js` de ese juego, no en el núcleo).
 
 ### Utilidades reutilizables ya presentes
 - **Stepper** (`− valor +`): markup `.stepper[data-stepper]` + `.stepper-btn[data-paso]`.
-  Ver pantalla de jugadores/equipos de DescriptIA en `index.html` + `main.js`.
+  Ver pantalla de jugadores/equipos de DescriptIA en `index.html` + `js/descriptia/main.js`.
 - **Lista de inputs de nombres**: patrón `sincronizarJugadores()` + `renderNombresJugadores()`
-  en `main.js` (mantiene un array sincronizado con el nº elegido, conservando lo escrito).
+  en `js/descriptia/main.js` (mantiene un array sincronizado con el nº elegido, conservando lo escrito).
 - **Barajar**: existe una función `barajar(array)` (usada en el reparto de equipos).
   Reutilizarla para orden de jugadores y para el mazo.
 - **Persistencia**: `guardarEstado()/cargarEstado()/borrarEstado()/reiniciarEstado()`
@@ -150,13 +164,14 @@ const efectosPorValor = {
 ## 5. Convenciones para no chocar con DescriptIA
 
 Como todo es global (sin módulos), **evitar colisiones de nombres**:
-- Nuevo fichero **`js/cartas.js`** para toda la lógica del juego.
-- Nuevo fichero de datos **`data/efectos-cartas.js`** (los 10 efectos + estructura de mazo).
+- Nueva carpeta **`js/cartas/`** para la lógica del juego (p. ej. `main.js`, y luego `juego.js`).
+- Nueva carpeta de datos **`data/cartas/`** (p. ej. `efectos.js` con los 10 efectos + estructura de mazo).
 - **Prefijar** estado y funciones, p. ej. objeto de estado `cfEstado` y funciones
   `conectarCartas…()`, `cfMostrar…()`. (cf = Cartas de la Fortuna).
 - Nombres de pantallas prefijados: `data-pantalla="cf-config"`, `"cf-juego"`, `"cf-fin"`.
-- Añadir los `<script>` nuevos en `index.html` **después** de `pantallas.js`
-  (que es común) y su init en `DOMContentLoaded`.
+- Añadir los `<script>` nuevos en `index.html` **después** de `js/nucleo/pantallas.js`
+  y **antes** de `js/nucleo/arranque.js`. Cada juego registra su init en su propio
+  `document.addEventListener("DOMContentLoaded", …)`.
 
 ---
 
@@ -183,7 +198,7 @@ Convertir la identidad de la app de DescriptIA a FIEsta.
 Enganchar «Cartas de la Fortuna» al hub y crear su esqueleto.
 - Añadir su `.juego-card` en la pantalla `fiesta`.
 - Crear las pantallas vacías `cf-config`, `cf-juego`, `cf-fin` en `index.html`.
-- Crear `js/cartas.js` con su `init` y el objeto `cfEstado` (namespacing).
+- Crear `js/cartas/main.js` con su `init` y el objeto `cfEstado` (namespacing).
 - Wiring: la tarjeta del hub lleva a `cf-config`; botones «Atrás»/volver a `fiesta`.
 - **TODOs de aprendizaje:**
   - **TODO 1.1** — Entender el **patrón SPA** de este repo (`mostrarPantalla`,
@@ -204,7 +219,7 @@ Pantalla `cf-config` parecida a la de jugadores de DescriptIA, pero sin equipos.
 
 ### Fase 3 — Modelo de baraja y estado del juego
 Datos y lógica base (sin UI todavía).
-- En `data/efectos-cartas.js`: definir palos, valores y `efectosPorValor` (10 textos
+- En `data/cartas/efectos.js`: definir palos, valores y `efectosPorValor` (10 textos
   placeholder). Estructura preparada para cartas de tarot (`origen`).
 - Construir el **mazo de 40 cartas**, función para **barajar** y **robar** (sacar la
   superior). Estado: mazo restante, índice de turno, carta revelada actual.
@@ -238,5 +253,10 @@ La pantalla `cf-juego` completa.
 ## 7. Estado actual del repo (punto de partida)
 - Hub FIEsta ya implementado (pantalla `fiesta` + tarjeta de DescriptIA + arranque en `fiesta`).
 - Botón «← FIEsta» en la pantalla de inicio de DescriptIA.
-- **Rebranding (título/manifest/icono) todavía NO hecho** → es la Fase 0.
-- «Cartas de la Fortuna» todavía **no existe** → Fases 1–4.
+- ✅ **Fase 0 hecha**: rebranding a FIEsta (título/manifest/`apple-mobile-web-app-title`),
+  icono nuevo (`icons/icono.svg` como favicon + `icon-180/192/512.png` generados con
+  `icons/generar_icono.py`), y logo SVG en la pantalla principal.
+- ✅ **Reorganización por carpetas hecha** (ver estructura arriba): `js/nucleo/`,
+  `js/descriptia/`, `data/descriptia/`. El núcleo arranca la app y muestra el hub;
+  cada juego registra su propio wiring.
+- ⏳ «Cartas de la Fortuna» todavía **no existe** → Fases 1–4 (siguiente: Fase 1).

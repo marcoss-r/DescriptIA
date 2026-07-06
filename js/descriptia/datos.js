@@ -1,5 +1,5 @@
 // Utilidades sobre las tarjetas: banco de datos + barajar y repartir las 40.
-// El banco parte de TARJETAS (semilla en data/tarjetas.js) y se sobrescribe
+// El banco parte de TARJETAS (semilla en data/descriptia/tarjetas.js) y se sobrescribe
 // con las ediciones que el usuario guarde en localStorage.
 
 const TOTAL_TARJETAS_PARTIDA = 40;
@@ -9,7 +9,7 @@ const TOTAL_TARJETAS_PARTIDA = 40;
 // ============================================================
 const CLAVE_TARJETAS = "descriptia_tarjetas";
 
-// Copia profunda del banco semilla definido en data/tarjetas.js.
+// Copia profunda del banco semilla definido en data/descriptia/tarjetas.js.
 function clonarSemilla() {
   const copia = {};
   Object.keys(TARJETAS).forEach((cat) => {

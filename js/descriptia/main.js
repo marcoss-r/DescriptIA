@@ -1,4 +1,5 @@
-// Arranque y asistente de configuración de la partida (Fase 3).
+// DescriptIA: arranque del juego y asistente de configuración de la partida.
+// (Lo común a todos los juegos vive en js/nucleo/.)
 
 // --- Límites de la partida ---
 const MIN_JUGADORES = 4;
@@ -18,8 +19,7 @@ const cfg = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  conectarNavegacionGenerica();
-  conectarFiesta();
+  conectarEntradaDescriptia();
   conectarInicio();
   conectarPantallaJugadores();
   conectarPantallaEquipos();
@@ -33,30 +33,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (cargarEstado()) {
     document.getElementById("btn-continuar").hidden = false;
   }
-  mostrarPantalla("fiesta");
 });
 
-// Registra el service worker (permite instalarla como app y jugar sin conexión).
-// Solo funciona sobre http(s), no al abrir el archivo directamente (file://).
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {
-      /* si falla, la app sigue funcionando igual, solo sin offline */
-    });
-  });
-}
-
-// Botones "Atrás" (cualquier botón con data-volver).
-function conectarNavegacionGenerica() {
-  document.querySelectorAll("[data-volver]").forEach((boton) => {
-    boton.addEventListener("click", () => mostrarPantalla(boton.dataset.volver));
-  });
-}
-
 // ============================================================
-//  FIEsta (pantalla principal: elegir juego)
+//  Entrada desde el hub FIEsta hacia DescriptIA
 // ============================================================
-function conectarFiesta() {
+function conectarEntradaDescriptia() {
   document
     .getElementById("btn-juego-descriptia")
     .addEventListener("click", () => mostrarPantalla("inicio"));

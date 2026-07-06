@@ -1,7 +1,7 @@
 """Script de consola para añadir tarjetas al banco del juego.
 
-Lee/escribe data/tarjetas.json (fuente de la verdad) y regenera
-data/tarjetas.js (lo que carga la web), ya que el navegador no puede
+Lee/escribe data/descriptia/tarjetas.json (fuente de la verdad) y regenera
+data/descriptia/tarjetas.js (lo que carga la web), ya que el navegador no puede
 leer un .json directamente al abrir index.html sin servidor.
 """
 
