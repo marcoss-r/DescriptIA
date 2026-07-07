@@ -850,40 +850,30 @@ button.secundario:hover {
   min-height: 44px;
 }
 
-/* Zona "Efectos actuales": panel lateral derecho, VERTICAL y fuera del flujo
-   (position: absolute), para no empujar ni recortar la carta principal. Tiene
-   fondo propio para leerse como una bandeja aparte. */
+/* Zona "Efectos actuales": panel DESPLEGABLE (overlay). Está fuera del flujo y
+   oculto hasta pulsar el botón, así no reserva espacio ni recorta la carta.
+   Aparece flotando por encima del contenido, sobre los botones inferiores. */
 .cf-efectos {
   position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  width: 78px;
-  max-height: 80%;
+  left: 50%;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(90vw, 26rem);
+  max-height: 55%;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.35rem;
+  padding: 0.85rem;
   background: var(--color-fondo-alt);
-  border-radius: var(--radio-borde-chico);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-borde);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  z-index: 10;
 }
-.cf-efectos-titulo {
-  margin: 0;
-  font-size: 0.7rem;
-  line-height: 1.15;
-  color: var(--color-texto-tenue);
-  font-weight: 700;
-}
-/* Lista vertical de efectos */
+/* Los efectos en rejilla que se ajusta (varios por fila si caben) */
 .cf-efectos-lista {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: 100%;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
 }
 /* Cada efecto: beneficiado (arriba) · sprite · perjudicado (abajo) */
 .cf-efecto-item {
@@ -891,7 +881,8 @@ button.secundario:hover {
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
-  width: 100%;
+  width: 64px;
+  flex: 0 0 auto;
 }
 .cf-efecto-item img {
   width: 100%;
@@ -915,10 +906,4 @@ button.secundario:hover {
 }
 .cf-efecto-perj {
   color: var(--color-fallo); /* perjudicado en rojo */
-}
-
-/* Cuando hay efectos, se reserva el hueco del panel derecho: el contenido central
-   (carta, texto, botones) se desplaza a la izquierda y nunca queda bajo el panel. */
-.pantalla.cf-con-efectos {
-  padding-right: calc(1.5rem + env(safe-area-inset-right) + 88px);
 }

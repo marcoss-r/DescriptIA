@@ -261,11 +261,12 @@ La pantalla `cf-juego` completa.
 ### Fase 6 — Pulido y efectos nuevos (en curso)
 Hecho:
 - **Config**: la pantalla arranca con el mínimo de jugadores (2); el stepper sube hasta 10.
-- **Zona «Efectos actuales»** en `cf-juego`: fila horizontal de mini-sprites con el
-  beneficiado (azul, arriba) y el perjudicado (rojo, abajo), alimentada por
-  `cfEstado.efectosActivos`. Aplica al 7 (indefinido), al 6 (perjudicado; caduca en su
-  próximo turno) y al tarot Diablo normal/invertida y Loco invertida (caducan cuando le
-  vuelve a tocar al que la sacó).
+- **«Efectos actuales»** en `cf-juego`: botón «Efectos actuales (N)» que despliega un
+  panel flotante (overlay) con mini-sprites; beneficiado (azul, arriba) y perjudicado
+  (rojo, abajo). Se alimenta de `cfEstado.efectosActivos`. Es desplegable para no
+  reservar espacio ni recortar la carta/el texto largo (p. ej. la Rueda). Aplica al 7
+  (indefinido), al 6 (perjudicado; caduca en su próximo turno) y al tarot Diablo
+  normal/invertida y Loco invertida (caducan cuando le vuelve a tocar al que la sacó).
 - **Elegir objetivo**: el 7 y el Diablo muestran botones con los nombres; «Siguiente» espera.
 - **Rueda normal**: genera tragos (2–6) y nº de jugadores (1 … total − 1, se reparte entre los demás).
 - **Rueda invertida**: botón «Revelar número» → número secreto de ruleta rusa (1..nº jugadores).
@@ -304,5 +305,5 @@ Pendiente / futuro:
 - 🔧 **Fase 6 en curso**: mínimo 2 jugadores por defecto, zona «Efectos actuales»
   (beneficiado azul / perjudicado rojo con mini-sprites), elección de objetivo con
   botones, y funcionalidad extra de la Rueda (normal: tragos + jugadores; invertida:
-  número secreto; jugadores de la Rueda normal = 1 … total − 1). `sw.js` en v7.
-  Pendiente: más pulido y efectos futuros.
+  número secreto; jugadores de la Rueda normal = 1 … total − 1). Los efectos van en un
+  botón desplegable para no recortar la carta. `sw.js` en v10. Pendiente: más pulido.

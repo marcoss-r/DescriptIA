@@ -270,9 +270,11 @@
       <!-- Aparece tras revelar; pasa el turno al siguiente jugador -->
       <button type="button" id="cf-btn-siguiente" hidden>Siguiente jugador</button>
 
-      <!-- Zona de efectos en curso (se muestra solo si hay alguno) -->
+      <!-- Botón que despliega los efectos en curso (oculto si no hay ninguno) -->
+      <button type="button" class="secundario" id="cf-btn-efectos" hidden>Efectos actuales</button>
+
+      <!-- Panel desplegable de efectos (overlay flotante, oculto hasta pulsar el botón) -->
       <div class="cf-efectos" id="cf-efectos" hidden>
-        <h2 class="cf-efectos-titulo">Efectos actuales</h2>
         <div class="cf-efectos-lista" id="cf-efectos-lista"></div>
       </div>
 

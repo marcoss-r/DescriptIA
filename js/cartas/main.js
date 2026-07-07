@@ -240,6 +240,10 @@ function conectarCartasJuego() {
   document
     .getElementById("cf-btn-siguiente")
     .addEventListener("click", cfSiguienteJugador);
+  // El botón "Efectos actuales" despliega/oculta el panel de efectos.
+  document
+    .getElementById("cf-btn-efectos")
+    .addEventListener("click", cfToggleEfectos);
 }
 
 // Entra a la pantalla de juego (desde cfEmpezar). El mazo y el orden ya vienen
@@ -487,21 +491,32 @@ function cfPintarRuedaInvertida(accion) {
   accion.appendChild(btn);
 }
 
-// Pinta la zona "Efectos actuales": una columna por efecto (beneficiado azul
-// arriba, mini-sprite en medio, perjudicado rojo abajo). Se oculta si no hay.
+// Abre o cierra el panel desplegable de efectos.
+function cfToggleEfectos() {
+  const zona = document.getElementById("cf-efectos");
+  zona.hidden = !zona.hidden;
+}
+
+// Rellena el panel de efectos (beneficiado azul arriba, mini-sprite en medio,
+// perjudicado rojo abajo) y actualiza el botón "Efectos actuales (N)". El botón y
+// el panel se ocultan si no hay ningún efecto; el panel arranca cerrado cada turno.
 function cfRenderEfectos() {
+  const boton = document.getElementById("cf-btn-efectos");
   const zona = document.getElementById("cf-efectos");
   const lista = document.getElementById("cf-efectos-lista");
-  const seccion = document.querySelector('[data-pantalla="cf-juego"]');
   lista.innerHTML = "";
-  if (cfEstado.efectosActivos.length === 0) {
+
+  const n = cfEstado.efectosActivos.length;
+  if (n === 0) {
+    boton.hidden = true;
     zona.hidden = true;
-    seccion.classList.remove("cf-con-efectos");
     return;
   }
-  zona.hidden = false;
-  // Reservamos hueco a la derecha para que la carta y su texto no queden bajo el panel.
-  seccion.classList.add("cf-con-efectos");
+
+  boton.hidden = false;
+  boton.textContent = `Efectos actuales (${n})`;
+  zona.hidden = true; // se abre solo al pulsar el botón
+
   cfEstado.efectosActivos.forEach((ef) => {
     const item = document.createElement("div");
     item.className = "cf-efecto-item";
