@@ -1,7 +1,7 @@
 // Service worker de DescriptIA: cachea todos los archivos para que la app
 // se pueda instalar y funcione sin conexión. Para publicar una actualización,
 // sube el número de versión (CACHE) y se refrescará en el siguiente arranque.
-const CACHE = "fiesta-v8";
+const CACHE = "fiesta-v9";
 
 const ARCHIVOS = [
   "./",

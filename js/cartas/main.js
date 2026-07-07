@@ -492,12 +492,16 @@ function cfPintarRuedaInvertida(accion) {
 function cfRenderEfectos() {
   const zona = document.getElementById("cf-efectos");
   const lista = document.getElementById("cf-efectos-lista");
+  const seccion = document.querySelector('[data-pantalla="cf-juego"]');
   lista.innerHTML = "";
   if (cfEstado.efectosActivos.length === 0) {
     zona.hidden = true;
+    seccion.classList.remove("cf-con-efectos");
     return;
   }
   zona.hidden = false;
+  // Reservamos hueco a la derecha para que la carta y su texto no queden bajo el panel.
+  seccion.classList.add("cf-con-efectos");
   cfEstado.efectosActivos.forEach((ef) => {
     const item = document.createElement("div");
     item.className = "cf-efecto-item";

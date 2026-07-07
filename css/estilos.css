@@ -916,3 +916,9 @@ button.secundario:hover {
 .cf-efecto-perj {
   color: var(--color-fallo); /* perjudicado en rojo */
 }
+
+/* Cuando hay efectos, se reserva el hueco del panel derecho: el contenido central
+   (carta, texto, botones) se desplaza a la izquierda y nunca queda bajo el panel. */
+.pantalla.cf-con-efectos {
+  padding-right: calc(1.5rem + env(safe-area-inset-right) + 88px);
+}
