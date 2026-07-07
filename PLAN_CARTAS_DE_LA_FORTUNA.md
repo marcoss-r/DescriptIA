@@ -246,10 +246,33 @@ La pantalla `cf-juego` completa.
   - **TODO 4.2** — **Lógica de turnos**: rotar por el orden de jugadores, consumir
     carta del mazo, y **detectar el fin** para saltar a la pantalla de fin.
 
-### Fase 5 — (Posterior/opcional) Arte real y tarot
-- Sustituir los **frentes placeholder por los PNG de pixel art** reales.
-- Añadir las **cartas de tarot** al mazo con sus efectos (cuando estén definidos).
-- (Opcional) **Reanudar partida** con `localStorage`, imitando el patrón de DescriptIA.
+### Fase 5 — Continuar partida (persistencia)
+> Arte real (frentes pixel art) y tarot (6 cartas con efectos) YA integrados en fases
+> anteriores; lo único pendiente de esta fase es **reanudar partida**.
+- **Guardar** `cfEstado` en `localStorage` al inicio de cada turno (carta boca abajo)
+  y **borrarlo** al terminar el mazo.
+- En `cf-config`, botón **«Continuar partida»** visible solo si hay partida guardada;
+  al pulsarlo, cargar el estado y entrar a `cf-juego`.
+- **TODOs de aprendizaje:**
+  - **TODO 5.1** — **Serializar estado**: `JSON.stringify`/`JSON.parse`, `localStorage`
+    (`setItem`/`getItem`/`removeItem`) con `try/catch`, y `Object.assign` para volcar
+    los datos guardados sobre `cfEstado`.
+
+### Fase 6 — Pulido y efectos nuevos (en curso)
+Hecho:
+- **Config**: la pantalla arranca con el mínimo de jugadores (2); el stepper sube hasta 10.
+- **Zona «Efectos actuales»** en `cf-juego`: fila horizontal de mini-sprites con el
+  beneficiado (azul, arriba) y el perjudicado (rojo, abajo), alimentada por
+  `cfEstado.efectosActivos`. Aplica al 7 (indefinido), al 6 (perjudicado; caduca en su
+  próximo turno) y al tarot Diablo normal/invertida y Loco invertida (caducan cuando le
+  vuelve a tocar al que la sacó).
+- **Elegir objetivo**: el 7 y el Diablo muestran botones con los nombres; «Siguiente» espera.
+- **Rueda normal**: genera tragos (2–6) y nº de jugadores (1 … total − 1, se reparte entre los demás).
+- **Rueda invertida**: botón «Revelar número» → número secreto de ruleta rusa (1..nº jugadores).
+
+Pendiente / futuro:
+- Más pulido visual (animaciones, feedback al revelar, detalles).
+- Otros efectos nuevos que se quieran añadir.
 
 ---
 
@@ -266,10 +289,20 @@ La pantalla `cf-juego` completa.
   `js/cartas/main.js` con `cfEstado` y navegación.
 - ✅ **Fase 2 hecha**: pantalla `cf-config` (stepper 2–10 + nombres), validación y orden
   de turno barajado; `barajar` movido a `js/nucleo/util.js`. (TODOs 2.1 y 2.2 completados.)
-- ✅ **Fase 3 — arte de cartas hecho**: reverso (bordes blancos, interior azul, mini
-  estrellas de 4 puntas) + las 40 cartas en pixel art en `img/cartas/`, generadas con
-  `img/cartas/generar_cartas.py` (ases sencillos). Nombres: `<palo>-<1..7|sota|caballo|rey>.png`
-  y `reverso.png`. `_contacto.png` es solo hoja de revisión (no la usa la app).
-- ⏳ **Pendiente de Fase 3**: el MODELO DE DATOS de la baraja (`data/cartas/efectos.js`:
-  10 efectos por valor + construir/​barajar/​robar el mazo en `cfEstado`). Aún sin hacer.
-- ⏳ Siguiente: terminar modelo de baraja + Fase 4 (pantalla de juego que enseñe estas imágenes).
+- ✅ **Fase 3 hecha (arte + modelo de datos)**: reverso + 40 españolas en pixel art en
+  `img/cartas/` (`img/cartas/generar_cartas.py`); y `data/cartas/efectos.js` con palos,
+  valores, `CF_EFECTOS_POR_VALOR` (10 efectos), `cfConstruirMazo()` y `cfRobarCarta()`.
+  Además se añadió el **tarot**: 6 cartas (3 arcanos × normal/invertida) con
+  `CF_EFECTOS_TAROT` y `cfConstruirMazoTarot()`; el mazo mezcla 40 + 6 = **46 cartas**.
+- ✅ **Fase 4 hecha**: pantalla `cf-juego` completa — cabecera «Le toca a», carta como
+  botón con **volteo 3D en CSS** (reverso ↔ frente PNG + texto del efecto), «Siguiente
+  jugador» con rotación de turnos por módulo, y fin de mazo → `cf-fin`. Imágenes de las
+  cartas cacheadas en `sw.js` (v6) para jugar **offline**.
+- ✅ **Fase 5 hecha**: reanudar partida. Botón «Continuar» en `cf-config`, guardado en
+  cada turno y `cfGuardar`/`cfCargar`/`cfHayPartidaGuardada`/`cfBorrar`/`cfReanudar`/
+  `cfTerminar` completos (persistencia en `localStorage` con `JSON`).
+- 🔧 **Fase 6 en curso**: mínimo 2 jugadores por defecto, zona «Efectos actuales»
+  (beneficiado azul / perjudicado rojo con mini-sprites), elección de objetivo con
+  botones, y funcionalidad extra de la Rueda (normal: tragos + jugadores; invertida:
+  número secreto; jugadores de la Rueda normal = 1 … total − 1). `sw.js` en v7.
+  Pendiente: más pulido y efectos futuros.

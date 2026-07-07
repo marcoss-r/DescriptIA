@@ -233,16 +233,49 @@
       <p>Escribe sus nombres:</p>
       <div class="lista-scroll" id="cf-lista-nombres"></div>
       <p class="error" id="cf-error-jugadores"></p>
+      <!-- Solo visible si hay una partida guardada reanudable (lo decide JS) -->
+      <button type="button" id="cf-btn-continuar" hidden>Continuar partida</button>
       <div class="fila-botones">
         <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
         <button type="button" id="cf-btn-empezar">Empezar</button>
       </div>
     </section>
 
-    <!-- Pantalla de juego: mazo, revelado y turnos (se completa en la Fase 4) -->
-    <section class="pantalla" data-pantalla="cf-juego">
-      <h1>Juego</h1>
-      <p>Aquí irá el mazo y el revelado de cartas (Fase 4).</p>
+    <!-- Pantalla de juego: cabecera, mazo boca abajo (botón) y revelado -->
+    <section class="pantalla con-scroll" data-pantalla="cf-juego">
+      <!-- Cabecera: el nombre se actualiza en cada turno desde JS -->
+      <div class="cf-turno">Le toca a: <span id="cf-turno-nombre"></span></div>
+
+      <!-- La carta es un botón: tocarla estando boca abajo = revelar.
+           .cf-carta = escena 3D; .cf-carta-interior = lo que gira; dentro, las
+           dos caras (reverso visible al inicio, frente que se rellena por JS). -->
+      <button type="button" class="cf-carta" id="cf-carta">
+        <div class="cf-carta-interior">
+          <div class="cf-carta-cara cf-carta-reverso">
+            <img src="img/cartas/reverso.png" alt="Carta boca abajo" />
+          </div>
+          <div class="cf-carta-cara cf-carta-frente">
+            <img id="cf-carta-frente-img" src="" alt="Carta revelada" />
+          </div>
+        </div>
+      </button>
+
+      <!-- Texto del efecto de la carta revelada (vacío hasta que se revela) -->
+      <p class="cf-efecto" id="cf-efecto"></p>
+
+      <!-- Acción especial de la carta (elegir jugador / números de la rueda /
+           botón de la ruleta rusa); lo rellena JS según la carta revelada. -->
+      <div class="cf-accion" id="cf-accion"></div>
+
+      <!-- Aparece tras revelar; pasa el turno al siguiente jugador -->
+      <button type="button" id="cf-btn-siguiente" hidden>Siguiente jugador</button>
+
+      <!-- Zona de efectos en curso (se muestra solo si hay alguno) -->
+      <div class="cf-efectos" id="cf-efectos" hidden>
+        <h2 class="cf-efectos-titulo">Efectos actuales</h2>
+        <div class="cf-efectos-lista" id="cf-efectos-lista"></div>
+      </div>
+
       <button type="button" class="secundario" data-volver="cf-config">Atrás</button>
     </section>
 
@@ -267,6 +300,7 @@
   <script src="js/descriptia/main.js"></script>
 
   <!-- Cartas de la Fortuna -->
+  <script src="data/cartas/efectos.js"></script>
   <script src="js/cartas/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
