@@ -862,6 +862,12 @@ button.secundario:hover {
   padding: 2rem;
   background: rgba(4, 8, 20, 0.6);
 }
+/* OJO: nuestro display:flex pisa el display:none que aplica el atributo `hidden`
+   (el estilo de autor gana al del navegador). Esta regla devuelve la prioridad
+   al estado oculto; sin ella, el overlay se ve siempre y bloquea el juego. */
+.cf-efectos-overlay[hidden] {
+  display: none;
+}
 /* Panel flotante con la lista de efectos */
 .cf-efectos-panel {
   width: min(90vw, 26rem);
