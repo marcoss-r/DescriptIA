@@ -523,7 +523,7 @@ function cfRenderEfectos() {
   }
 
   boton.hidden = false;
-  boton.textContent = `Efectos actuales (${n})`;
+  boton.textContent = `Efectos (${n})`;
   zona.hidden = true; // se abre solo al pulsar el botón
 
   cfEstado.efectosActivos.forEach((ef) => {

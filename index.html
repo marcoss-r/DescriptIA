@@ -270,8 +270,9 @@
       <!-- Aparece tras revelar; pasa el turno al siguiente jugador -->
       <button type="button" id="cf-btn-siguiente" hidden>Siguiente jugador</button>
 
-      <!-- Botón que despliega los efectos en curso (oculto si no hay ninguno) -->
-      <button type="button" class="secundario" id="cf-btn-efectos" hidden>Efectos actuales</button>
+      <!-- Chip que despliega los efectos en curso (esquina superior derecha, fuera
+           del flujo para no empujar la carta ni el texto; oculto si no hay ninguno) -->
+      <button type="button" class="secundario cf-chip-efectos" id="cf-btn-efectos" hidden>Efectos</button>
 
       <!-- Overlay de efectos: cubre la pantalla (bloquea continuar) y se cierra al
            tocar en cualquier parte. Oculto hasta pulsar el botón. -->
