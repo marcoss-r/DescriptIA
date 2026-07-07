@@ -244,6 +244,10 @@ function conectarCartasJuego() {
   document
     .getElementById("cf-btn-efectos")
     .addEventListener("click", cfToggleEfectos);
+  // Tocar en cualquier parte del overlay de efectos lo cierra.
+  document
+    .getElementById("cf-efectos")
+    .addEventListener("click", cfCerrarEfectos);
 }
 
 // Entra a la pantalla de juego (desde cfEmpezar). El mazo y el orden ya vienen
@@ -495,6 +499,11 @@ function cfPintarRuedaInvertida(accion) {
 function cfToggleEfectos() {
   const zona = document.getElementById("cf-efectos");
   zona.hidden = !zona.hidden;
+}
+
+// Cierra el panel de efectos (al tocar en cualquier parte del overlay).
+function cfCerrarEfectos() {
+  document.getElementById("cf-efectos").hidden = true;
 }
 
 // Rellena el panel de efectos (beneficiado azul arriba, mini-sprite en medio,

@@ -850,23 +850,28 @@ button.secundario:hover {
   min-height: 44px;
 }
 
-/* Zona "Efectos actuales": panel DESPLEGABLE (overlay). Está fuera del flujo y
-   oculto hasta pulsar el botón, así no reserva espacio ni recorta la carta.
-   Aparece flotando por encima del contenido, sobre los botones inferiores. */
-.cf-efectos {
+/* "Efectos actuales" desplegado: overlay que CUBRE la pantalla de juego (bloquea
+   continuar) y se cierra al tocar en cualquier parte. Oculto hasta pulsar el botón. */
+.cf-efectos-overlay {
   position: absolute;
-  left: 50%;
-  bottom: calc(5rem + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(4, 8, 20, 0.6);
+}
+/* Panel flotante con la lista de efectos */
+.cf-efectos-panel {
   width: min(90vw, 26rem);
-  max-height: 55%;
+  max-height: 80%;
   overflow-y: auto;
-  padding: 0.85rem;
+  padding: 1rem;
   background: var(--color-fondo-alt);
   border: 1px solid var(--color-acento);
   border-radius: var(--radio-borde);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
-  z-index: 10;
 }
 /* Los efectos en rejilla que se ajusta (varios por fila si caben) */
 .cf-efectos-lista {

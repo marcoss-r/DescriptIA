@@ -273,9 +273,12 @@
       <!-- Botón que despliega los efectos en curso (oculto si no hay ninguno) -->
       <button type="button" class="secundario" id="cf-btn-efectos" hidden>Efectos actuales</button>
 
-      <!-- Panel desplegable de efectos (overlay flotante, oculto hasta pulsar el botón) -->
-      <div class="cf-efectos" id="cf-efectos" hidden>
-        <div class="cf-efectos-lista" id="cf-efectos-lista"></div>
+      <!-- Overlay de efectos: cubre la pantalla (bloquea continuar) y se cierra al
+           tocar en cualquier parte. Oculto hasta pulsar el botón. -->
+      <div class="cf-efectos-overlay" id="cf-efectos" hidden>
+        <div class="cf-efectos-panel">
+          <div class="cf-efectos-lista" id="cf-efectos-lista"></div>
+        </div>
       </div>
 
       <button type="button" class="secundario" data-volver="cf-config">Atrás</button>
