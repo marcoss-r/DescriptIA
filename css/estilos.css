@@ -931,3 +931,67 @@ button.secundario:hover {
 .cf-efecto-perj {
   color: var(--color-fallo); /* perjudicado en rojo */
 }
+
+/* ==========================================================
+   La Ruleta (pantalla de juego)
+   ========================================================== */
+.rl-ruleta-zona {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.rl-ruleta {
+  width: min(92vw, 460px);
+  height: auto;
+  /* Sin esto, arrastrar sobre el SVG haría scroll/zoom en móvil en vez de mover la aguja. */
+  touch-action: none;
+}
+
+/* Semicírculo base y su diámetro */
+.rl-base {
+  fill: var(--color-superficie);
+}
+.rl-base-linea {
+  stroke: var(--color-texto-tenue);
+  stroke-width: 1.5;
+}
+
+/* Sectores de puntuación: central (3) en acento, laterales (1) más apagados */
+.rl-sector-3 {
+  fill: var(--color-acento);
+}
+.rl-sector-1 {
+  fill: var(--color-acento-oscuro);
+}
+
+/* Números 3 / 1 / 1 dentro de cada cuña */
+.rl-numero {
+  fill: var(--color-texto);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Aguja: línea del centro al borde + pivote */
+.rl-aguja-linea {
+  stroke: var(--color-texto);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.rl-aguja-base {
+  fill: var(--color-texto);
+}
+
+/* Palabras (polos) de la temática */
+.rl-palabra {
+  fill: var(--color-texto-tenue);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Texto "+X puntos para NOMBRE" en la revelación */
+.rl-resultado {
+  font-size: 1.3rem;
+  font-weight: 700;
+  min-height: 1.5rem; /* reserva el hueco para que no salte el layout cuando está vacío */
+  text-align: center;
+}

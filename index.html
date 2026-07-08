@@ -300,10 +300,18 @@
     <!--  La Ruleta (esqueleto — Fase 1)                         -->
     <!-- ======================================================= -->
 
-    <!-- Configuración de jugadores (2–6). Su contenido llega en la Fase 2. -->
+    <!-- Configuración de jugadores (2–6) -->
     <section class="pantalla" data-pantalla="rl-config">
       <h1>La Ruleta</h1>
-      <p class="ayuda">Configuración de jugadores (Fase 2).</p>
+      <p>¿Cuántos jugáis?</p>
+      <div class="stepper" data-stepper="rl-jugadores">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="rl-valor-num-jugadores">2</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Escribe sus nombres:</p>
+      <div class="lista-scroll" id="rl-lista-nombres"></div>
+      <p class="error" id="rl-error-jugadores"></p>
       <div class="fila-botones">
         <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
         <button type="button" id="rl-btn-empezar">Empezar</button>
@@ -313,15 +321,36 @@
     <!-- Cambio de jugador: "Turno de: NOMBRE" (Fase 6). -->
     <section class="pantalla" data-pantalla="rl-turno">
       <h1>Turno de: <span id="rl-turno-nombre"></span></h1>
-      <p class="ayuda">Pantalla de cambio de jugador (Fase 6).</p>
+      <p class="ayuda">Tápate los ojos o date la vuelta. El resto, pulsad «Ver ruleta» cuando estéis listos.</p>
       <button type="button" id="rl-btn-ver-ruleta">Ver ruleta</button>
       <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
     <!-- Pantalla de juego: media ruleta + aguja (Fases 4–6). -->
     <section class="pantalla" data-pantalla="rl-juego">
-      <h1>La Ruleta</h1>
-      <p class="ayuda">La media ruleta se dibuja en la Fase 4.</p>
+      <div class="rl-ruleta-zona">
+        <!-- viewBox 200×120: semicírculo de radio 90 centrado en (100,100), boca
+             arriba. Los grupos #rl-sector y #rl-aguja los rellena el JS. -->
+        <svg class="rl-ruleta" id="rl-svg" viewBox="0 0 200 120" role="img" aria-label="Ruleta">
+          <!-- Semicírculo base: el path abierto (M…A…) se rellena cerrando por el diámetro. -->
+          <path class="rl-base" d="M 10 100 A 90 90 0 0 1 190 100" />
+          <line class="rl-base-linea" x1="10" y1="100" x2="190" y2="100" />
+          <!-- Rellenados por JS según el sub-estado -->
+          <g id="rl-sector"></g>
+          <g id="rl-aguja"></g>
+          <!-- Palabras (polos) de la temática, a los lados de la base -->
+          <text class="rl-palabra" id="rl-palabra-izq" x="6" y="114" text-anchor="start"></text>
+          <text class="rl-palabra" id="rl-palabra-der" x="194" y="114" text-anchor="end"></text>
+        </svg>
+      </div>
+      <!-- "+X puntos para NOMBRE" (solo en el sub-estado "resultado"). -->
+      <p class="rl-resultado" id="rl-resultado"></p>
+      <!-- Un botón por sub-estado; el JS muestra solo el que toca (rlActualizarControles). -->
+      <div class="fila-botones">
+        <button type="button" id="rl-btn-ocultar">Ocultar y pasar</button>
+        <button type="button" id="rl-btn-confirmar">Confirmar</button>
+        <button type="button" id="rl-btn-siguiente">Siguiente</button>
+      </div>
       <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
@@ -350,6 +379,7 @@
   <script src="js/cartas/main.js"></script>
 
   <!-- La Ruleta -->
+  <script src="data/ruleta/tematicas.js"></script>
   <script src="js/ruleta/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
