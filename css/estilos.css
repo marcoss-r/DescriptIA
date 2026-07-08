@@ -131,6 +131,14 @@ body {
   color: transparent;
 }
 
+/* Versión de la app: pegada bajo el título (el gap de .pantalla es 1rem).
+   El gris lo hereda de .pantalla p. */
+.fiesta-version {
+  margin-top: -0.75rem !important;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
 .lista-juegos {
   display: flex;
   flex-direction: column;

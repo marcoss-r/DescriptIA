@@ -1,6 +1,9 @@
 // Núcleo de FIEsta: arranque de la app y utilidades comunes a todos los juegos.
 // Debe cargarse el ÚLTIMO: al terminar muestra el hub de juegos.
 
+// Versión de la app. Al subirla, sube también CACHE en sw.js (otro contexto, no ve esto).
+const APP_VERSION = "3.0";
+
 // Botones "Atrás": cualquier botón con data-volver navega solo, sin JS específico.
 function conectarNavegacionGenerica() {
   document.querySelectorAll("[data-volver]").forEach((boton) => {
@@ -10,6 +13,7 @@ function conectarNavegacionGenerica() {
 
 document.addEventListener("DOMContentLoaded", () => {
   conectarNavegacionGenerica();
+  document.getElementById("app-version").textContent = "v" + APP_VERSION;
   // La app siempre arranca en el hub (pantalla "fiesta").
   mostrarPantalla("fiesta");
 });
