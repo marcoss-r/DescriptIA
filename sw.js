@@ -1,7 +1,7 @@
 // Service worker de DescriptIA: cachea todos los archivos para que la app
 // se pueda instalar y funcione sin conexión. Para publicar una actualización,
 // sube el número de versión (CACHE) y se refrescará en el siguiente arranque.
-const CACHE = "fiesta-v3.0";
+const CACHE = "fiesta-v3.1.1";
 
 const ARCHIVOS = [
   "./",
@@ -72,6 +72,21 @@ const ARCHIVOS = [
   "./img/cartas/tarot-loco-invertida.png",
   "./img/cartas/tarot-rueda.png",
   "./img/cartas/tarot-rueda-invertida.png",
+  // Zona Tensionada: cartas de los roles + reverso (Fase 0)
+  "./img/zona/reverso.png",
+  "./img/zona/buitre.png",
+  "./img/zona/plataforma.png",
+  "./img/zona/hacienda.png",
+  "./img/zona/sindicato.png",
+  "./img/zona/okupa.png",
+  "./img/zona/tasador.png",
+  "./img/zona/inmobiliaria.png",
+  "./img/zona/influencer.png",
+  "./img/zona/vecino-1.png",
+  "./img/zona/vecino-2.png",
+  "./img/zona/vecino-3.png",
+  "./img/zona/vecino-4.png",
+  "./img/zona/vecino-5.png",
 ];
 
 // Al instalar: guardar todos los archivos en caché.
