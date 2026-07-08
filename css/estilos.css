@@ -988,10 +988,32 @@ button.secundario:hover {
   font-weight: 600;
 }
 
+/* Tapa azul que cubre la cúpula y se destapa/oculta con una animación (JS). */
+.rl-tapa-forma {
+  fill: url(#rl-grad-tapa);
+}
+
 /* Texto "+X puntos para NOMBRE" en la revelación */
 .rl-resultado {
   font-size: 1.3rem;
   font-weight: 700;
   min-height: 1.5rem; /* reserva el hueco para que no salte el layout cuando está vacío */
   text-align: center;
+}
+/* Color según la puntuación obtenida */
+.rl-punt-3 { color: var(--color-exito); }      /* verde: acierto pleno (3) */
+.rl-punt-1 { color: var(--color-acento); }     /* azul: rozó (1) */
+.rl-punt-0 { color: var(--color-texto-tenue); } /* apagado: fallo (0) */
+
+/* Mientras la tapa se destapa, el texto espera invisible; luego hace "pop". */
+.rl-resultado-espera {
+  opacity: 0;
+}
+@keyframes rl-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.rl-resultado-pop {
+  animation: rl-pop 420ms var(--curva-transicion);
 }
