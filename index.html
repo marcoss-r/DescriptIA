@@ -69,6 +69,10 @@
           <span class="juego-card-nombre">Cartas de la Fortuna</span>
           <span class="juego-card-desc">Roba una carta y cumple su efecto</span>
         </button>
+        <button type="button" class="juego-card" id="btn-juego-ruleta">
+          <span class="juego-card-nombre">La Ruleta</span>
+          <span class="juego-card-desc">Adivina dónde cae el concepto en el espectro</span>
+        </button>
       </div>
     </section>
 
@@ -292,6 +296,42 @@
       <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
+    <!-- ======================================================= -->
+    <!--  La Ruleta (esqueleto — Fase 1)                         -->
+    <!-- ======================================================= -->
+
+    <!-- Configuración de jugadores (2–6). Su contenido llega en la Fase 2. -->
+    <section class="pantalla" data-pantalla="rl-config">
+      <h1>La Ruleta</h1>
+      <p class="ayuda">Configuración de jugadores (Fase 2).</p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" id="rl-btn-empezar">Empezar</button>
+      </div>
+    </section>
+
+    <!-- Cambio de jugador: "Turno de: NOMBRE" (Fase 6). -->
+    <section class="pantalla" data-pantalla="rl-turno">
+      <h1>Turno de: <span id="rl-turno-nombre"></span></h1>
+      <p class="ayuda">Pantalla de cambio de jugador (Fase 6).</p>
+      <button type="button" id="rl-btn-ver-ruleta">Ver ruleta</button>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Pantalla de juego: media ruleta + aguja (Fases 4–6). -->
+    <section class="pantalla" data-pantalla="rl-juego">
+      <h1>La Ruleta</h1>
+      <p class="ayuda">La media ruleta se dibuja en la Fase 4.</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Fin de la partida: ranking por puntos (Fase 7). -->
+    <section class="pantalla" data-pantalla="rl-fin">
+      <h1>Fin de la partida 🏁</h1>
+      <p class="ayuda">Ranking de jugadores (Fase 7).</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
   </div>
 
   <!-- Núcleo compartido -->
@@ -308,6 +348,9 @@
   <!-- Cartas de la Fortuna -->
   <script src="data/cartas/efectos.js"></script>
   <script src="js/cartas/main.js"></script>
+
+  <!-- La Ruleta -->
+  <script src="js/ruleta/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
   <script src="js/nucleo/arranque.js"></script>

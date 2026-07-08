@@ -1,7 +1,7 @@
 // Service worker de DescriptIA: cachea todos los archivos para que la app
 // se pueda instalar y funcione sin conexión. Para publicar una actualización,
 // sube el número de versión (CACHE) y se refrescará en el siguiente arranque.
-const CACHE = "fiesta-v13";
+const CACHE = "fiesta-v14";
 
 const ARCHIVOS = [
   "./",
@@ -15,6 +15,7 @@ const ARCHIVOS = [
   "./js/descriptia/juego.js",
   "./js/descriptia/main.js",
   "./js/cartas/main.js",
+  "./js/ruleta/main.js",
   "./data/descriptia/tarjetas.js",
   "./data/cartas/efectos.js",
   "./site.webmanifest",
