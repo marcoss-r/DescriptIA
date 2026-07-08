@@ -2,7 +2,7 @@
 // Debe cargarse el ÚLTIMO: al terminar muestra el hub de juegos.
 
 // Versión de la app. Al subirla, sube también CACHE en sw.js (otro contexto, no ve esto).
-const APP_VERSION = "3.0";
+const APP_VERSION = "3.2";
 
 // Botones "Atrás": cualquier botón con data-volver navega solo, sin JS específico.
 function conectarNavegacionGenerica() {

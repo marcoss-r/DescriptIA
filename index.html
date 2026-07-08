@@ -75,6 +75,10 @@
           <span class="juego-card-nombre">La Ruleta</span>
           <span class="juego-card-desc">Adivina dónde cae el concepto en el espectro</span>
         </button>
+        <button type="button" class="juego-card" id="btn-juego-zona">
+          <span class="juego-card-nombre">Zona Tensionada</span>
+          <span class="juego-card-desc">La ciudad duerme y los fondos buitre no</span>
+        </button>
       </div>
     </section>
 
@@ -374,6 +378,63 @@
       <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
+    <!-- ======================================================= -->
+    <!--  Zona Tensionada (esqueleto — Fase 1)                   -->
+    <!--                                                         -->
+    <!--  Las siete pantallas del juego, por ahora vacías. Cada  -->
+    <!--  una indica en qué fase se rellena. Solo la que tiene   -->
+    <!--  la clase "activa" es visible (js/nucleo/pantallas.js). -->
+    <!-- ======================================================= -->
+
+    <!-- Nº y nombres de jugadores (5–14). La rellena la Fase 2. -->
+    <section class="pantalla" data-pantalla="zt-jugadores">
+      <h1>Zona Tensionada</h1>
+      <p class="ayuda">Jugadores: stepper (5–14) y nombres. (Fase 2)</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Nº de buitres + interruptores de cartas especiales. La rellena la Fase 2. -->
+    <section class="pantalla" data-pantalla="zt-config">
+      <h1>Configuración de la partida</h1>
+      <p class="ayuda">Buitres e interruptores de cartas especiales. (Fase 2)</p>
+      <button type="button" class="secundario" data-volver="zt-jugadores">Atrás</button>
+    </section>
+
+    <!-- Revelación de roles pasando el móvil de mano en mano. La rellena la Fase 4. -->
+    <section class="pantalla" data-pantalla="zt-reparto">
+      <h1>Reparto de cartas</h1>
+      <p class="ayuda">«NOMBRE, coge el móvil» ↔ carta + efecto. (Fase 4)</p>
+      <button type="button" class="secundario" data-volver="zt-config">Atrás</button>
+    </section>
+
+    <!-- Registro del Concejal, elegido a mano alzada. La rellena la Fase 4. -->
+    <section class="pantalla" data-pantalla="zt-concejal">
+      <h1>Concejal de Urbanismo</h1>
+      <p class="ayuda">Votad a mano alzada y registrad quién es. (Fase 4)</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Turnos nocturnos que maneja la persona narradora. La rellena la Fase 5. -->
+    <section class="pantalla" data-pantalla="zt-noche">
+      <h1>La ciudad duerme…</h1>
+      <p class="ayuda">Cola de turnos nocturnos (buitres, Hacienda…). (Fase 5)</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Amanecer y votación de la asamblea. La rellena la Fase 6. -->
+    <section class="pantalla" data-pantalla="zt-dia">
+      <h1>Amanece en el barrio</h1>
+      <p class="ayuda">Resultado de la noche y votación de la asamblea. (Fase 6)</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
+    <!-- Victoria del bando ganador + roles revelados. La rellena la Fase 7. -->
+    <section class="pantalla" data-pantalla="zt-fin">
+      <h1>Fin de la partida 🏁</h1>
+      <p class="ayuda">Bando ganador y lista de roles revelados. (Fase 7)</p>
+      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+    </section>
+
   </div>
 
   <!-- Núcleo compartido -->
@@ -394,6 +455,9 @@
   <!-- La Ruleta -->
   <script src="data/ruleta/tematicas.js"></script>
   <script src="js/ruleta/main.js"></script>
+
+  <!-- Zona Tensionada (sus datos, data/zona/, llegan en la Fase 3) -->
+  <script src="js/zona/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
   <script src="js/nucleo/arranque.js"></script>
