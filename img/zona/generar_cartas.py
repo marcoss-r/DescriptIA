@@ -361,12 +361,12 @@ def escena_sindicato(d):
     d.point((26, 36), fill=(230, 150, 140))                 # colorete
     # brazo derecho llevándose una gamba a la boca
     d.polygon([(37, 43), (41, 43), (43, 48), (39, 49)], fill=CAMISA, outline=CAMISA_D)
-    d.line([(40, 46), (38, 42)], fill=SKIN, width=2)
-    d.ellipse([36, 39, 40, 43], fill=SKIN, outline=SKIN_D)
-    d.arc([33, 34, 39, 40], 300, 160, fill=GAMBA, width=2)  # gamba en mano
-    d.point((33, 36), fill=GAMBA_D)
-    d.line([(34, 33), (32, 31)], fill=GAMBA_D)              # antenas
-    d.line([(36, 33), (35, 31)], fill=GAMBA_D)
+    d.line([(41, 46), (41, 42)], fill=SKIN, width=2)
+    d.ellipse([39, 38, 43, 42], fill=SKIN, outline=SKIN_D)
+    d.arc([36, 33, 42, 39], 300, 160, fill=GAMBA, width=2)  # gamba en alto
+    d.point((36, 35), fill=GAMBA_D)
+    d.line([(37, 32), (35, 30)], fill=GAMBA_D)              # antenas
+    d.line([(39, 32), (38, 30)], fill=GAMBA_D)
     # mesa con mantel de cuadros
     d.rectangle([12, 58, 50, 78], fill=(238, 236, 230), outline=(170, 80, 80))
     CUADRO = (214, 110, 105)
@@ -444,9 +444,12 @@ def escena_plataforma(d):
     d.point((41, 51), fill=ORO)
     # cabeza con gafas de sol y sombrero de paja
     d.ellipse([32, 30, 44, 43], fill=SKIN, outline=SKIN_D)
-    d.rectangle([34, 34, 42, 37], fill=OSCURO)              # gafas de sol
-    d.point((36, 35), fill=BLANCO)
-    d.point((41, 35), fill=BLANCO)
+    # gafas de sol clásicas: dos lentes con puente y patillas
+    d.line([(32, 34), (44, 34)], fill=OSCURO)
+    d.ellipse([33, 33, 37, 37], fill=OSCURO)
+    d.ellipse([39, 33, 43, 37], fill=OSCURO)
+    d.point((34, 34), fill=BLANCO)                          # reflejos
+    d.point((40, 34), fill=BLANCO)
     d.line([(36, 40), (40, 40)], fill=OSCURO)               # sonrisa
     d.point((37, 41), fill=BLANCO)
     d.ellipse([29, 28, 47, 33], fill=PAJA, outline=PAJA_D)  # ala del sombrero
@@ -468,13 +471,14 @@ def escena_okupa(d):
     d.rectangle([24, 74, 32, 78], fill=(56, 44, 34), outline=OSCURO)
     d.rectangle([34, 74, 42, 78], fill=(56, 44, 34), outline=OSCURO)
     d.point((24, 76), fill=SKIN)
-    # hacha (antes que el brazo, para que la mano la agarre)
-    d.line([(41, 60), (51, 30)], fill=MADERA, width=2)
-    d.line([(44, 52), (48, 40)], fill=MADERA_W)
-    d.polygon([(43, 27), (50, 26), (52, 33), (45, 34)], fill=ACERO, outline=ACERO_D)
-    d.polygon([(50, 26), (53, 27), (54, 31), (52, 33)], fill=ACERO_D)  # culata
-    d.line([(44, 28), (43, 31)], fill=ACERO_W)              # filo
-    d.point((44, 33), fill=ACERO_W)
+    # hacha clásica: mango de madera, cabeza roja y filo gris
+    d.line([(43, 60), (51, 29)], fill=MADERA, width=2)
+    d.line([(45, 54), (48, 42)], fill=MADERA_W)
+    d.polygon([(47, 26), (54, 27), (54, 32), (48, 33)], fill=(196, 64, 56),
+              outline=(128, 38, 34))                        # cabeza roja
+    d.polygon([(43, 25), (47, 26), (48, 33), (44, 34)], fill=ACERO,
+              outline=ACERO_D)                              # hoja
+    d.line([(43, 26), (44, 33)], fill=ACERO_W)              # filo
     # jersey con parches y bajo deshilachado
     d.polygon([(23, 42), (43, 42), (45, 62), (21, 62)], fill=JERSEY, outline=JERSEY_D)
     for zx in range(23, 44, 3):
@@ -486,18 +490,16 @@ def escena_okupa(d):
     d.rectangle([36, 46, 40, 50], fill=(70, 110, 170), outline=(44, 72, 118))
     d.point((36, 50), fill=PAPEL_W)
     d.point((40, 46), fill=PAPEL_W)
-    # cinturón con candado colgado
+    # cinturón
     d.line([(22, 61), (44, 61)], fill=(60, 48, 34))
-    d.arc([31, 59, 35, 63], 180, 360, fill=ACERO_D)
-    d.rectangle([31, 62, 35, 66], fill=ORO, outline=ORO_D)
-    d.point((33, 64), fill=OSCURO)
     # brazo izquierdo caído
     d.polygon([(22, 43), (26, 44), (24, 58), (20, 57)], fill=JERSEY, outline=JERSEY_D)
     d.ellipse([20, 56, 24, 61], fill=SKIN, outline=SKIN_D)
-    # brazo derecho agarrando el hacha
-    d.polygon([(40, 44), (44, 45), (48, 50), (44, 53)], fill=JERSEY, outline=JERSEY_D)
-    d.point((44, 46), fill=SKIN)                            # codo por el roto
-    d.ellipse([44, 46, 49, 51], fill=SKIN, outline=SKIN_D)
+    # brazo derecho agarrando el hacha con el puño
+    d.polygon([(40, 44), (44, 45), (47, 49), (43, 52)], fill=JERSEY, outline=JERSEY_D)
+    d.point((43, 46), fill=SKIN)                            # codo por el roto
+    d.ellipse([44, 44, 50, 50], fill=SKIN, outline=SKIN_D)
+    d.line([(45, 47), (49, 47)], fill=SKIN_D)               # dedos cerrados
     # cabeza greñuda con barba
     d.pieslice([26, 25, 42, 39], 180, 360, fill=BARBA_D)
     d.polygon([(26, 31), (23, 27), (27, 29)], fill=BARBA_D)  # greñas sueltas
@@ -539,14 +541,14 @@ def escena_tasador(d):
     d.line([(34, 44), (34, 62)], fill=CHALECO_D)            # cremallera
     d.line([(22, 63), (46, 63)], fill=(70, 72, 82))         # cinturón
     d.point((34, 63), fill=ORO)
-    # planos enrollados bajo el brazo izquierdo
-    d.line([(12, 60), (26, 56)], fill=PAPEL, width=3)       # rollo blanco detrás
-    d.ellipse([10, 57, 15, 62], fill=PAPEL_W, outline=PAPEL_D)
-    d.line([(10, 53), (27, 48)], fill=PLANO_D, width=7)     # tubo azul con borde
-    d.line([(11, 53), (26, 48)], fill=PLANO, width=5)
-    d.line([(12, 51), (25, 47)], fill=PLANO_W)
-    d.ellipse([8, 50, 15, 57], fill=PLANO_W, outline=PLANO_D)
-    d.ellipse([10, 52, 13, 55], outline=PLANO_D)            # espiral del rollo
+    # planos enrollados bajo el brazo izquierdo (tubo horizontal)
+    d.rectangle([15, 54, 27, 58], fill=PAPEL, outline=PAPEL_D)  # rollo blanco
+    d.ellipse([13, 53, 18, 59], fill=PAPEL_W, outline=PAPEL_D)
+    d.rectangle([12, 46, 27, 53], fill=PLANO, outline=PLANO_D)  # tubo azul
+    d.line([(13, 47), (26, 47)], fill=PLANO_W)
+    d.line([(13, 52), (26, 52)], fill=PLANO_D)
+    d.ellipse([9, 45, 16, 54], fill=PLANO_W, outline=PLANO_D)
+    d.ellipse([11, 48, 14, 51], outline=PLANO_D)            # espiral del rollo
     d.polygon([(23, 43), (27, 44), (25, 56), (20, 55)], fill=CAMISAZ,
               outline=CAMISAZ_D)
     d.ellipse([19, 49, 24, 54], fill=SKIN, outline=SKIN_D)
@@ -581,10 +583,14 @@ def escena_inmobiliaria(d):
     # piernas y zapatos lustrosos
     d.rectangle([28, 64, 34, 76], fill=TRAJE_D, outline=(60, 62, 72))
     d.rectangle([36, 64, 42, 76], fill=TRAJE_D, outline=(60, 62, 72))
-    d.rectangle([26, 76, 35, 78], fill=OSCURO)
-    d.rectangle([35, 76, 44, 78], fill=OSCURO)
+    d.rectangle([26, 75, 34, 78], fill=OSCURO)
+    d.rectangle([36, 75, 44, 78], fill=OSCURO)
     d.point((28, 77), fill=GRIS)
     d.point((42, 77), fill=GRIS)
+    # cuello
+    d.rectangle([33, 41, 37, 44], fill=SKIN)
+    d.line([(33, 41), (33, 44)], fill=SKIN_D)
+    d.line([(37, 41), (37, 44)], fill=SKIN_D)
     # americana con camisa y corbata VERDE
     d.polygon([(24, 44), (46, 44), (47, 65), (23, 65)], fill=TRAJE, outline=TRAJE_D)
     d.polygon([(31, 44), (39, 44), (35, 54)], fill=BLANCO)  # camisa
@@ -597,15 +603,10 @@ def escena_inmobiliaria(d):
     d.point((43, 51), fill=VERDEC)                          # pañuelo del bolsillo
     d.point((44, 51), fill=VERDEC)
     d.point((35, 63), fill=TRAJE_D)                         # botón
-    # casita bajo el brazo izquierdo
-    d.polygon([(11, 55), (27, 55), (19, 48)], fill=(198, 80, 60),
-              outline=(140, 50, 38))
-    d.rectangle([13, 55, 25, 66], fill=(238, 222, 180), outline=(170, 150, 110))
-    d.rectangle([17, 60, 21, 66], fill=(120, 80, 45))
-    d.point((15, 58), fill=VENTANA)
-    d.point((23, 58), fill=VENTANA)
+    # brazo izquierdo caído
     d.polygon([(25, 45), (29, 46), (27, 57), (22, 56)], fill=TRAJE, outline=TRAJE_D)
-    d.ellipse([21, 52, 26, 57], fill=SKIN, outline=SKIN_D)
+    d.line([(23, 56), (26, 57)], fill=BLANCO)               # puño de la camisa
+    d.ellipse([22, 56, 27, 61], fill=SKIN, outline=SKIN_D)
     # brazo derecho en alto con el llavero
     d.polygon([(44, 45), (48, 46), (53, 36), (49, 34)], fill=TRAJE, outline=TRAJE_D)
     d.line([(48, 36), (49, 34)], fill=BLANCO)               # puño de la camisa
@@ -628,7 +629,6 @@ def escena_inmobiliaria(d):
     d.line([(33, 37), (37, 37)], fill=BLANCO)               # dientes
     d.pieslice([28, 26, 42, 36], 180, 360, fill=PELO_N)     # pelo engominado
     d.line([(31, 29), (34, 28)], fill=GRIS)                 # brillo de gomina
-    destello(d, 41, 39, BLANCO)                             # destello del anuncio
 
 
 def escena_influencer(d):
@@ -692,7 +692,6 @@ def escena_influencer(d):
     # mano que sujeta el móvil
     d.polygon([(47, 79), (47, 71), (51, 67), (56, 73), (56, 79)],
               fill=SKIN, outline=SKIN_D)
-    d.ellipse([43, 68, 49, 73], fill=SKIN, outline=SKIN_D)  # pulgar
 
 
 def escena_vecino1(d):
