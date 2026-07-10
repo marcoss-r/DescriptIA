@@ -98,7 +98,7 @@ Cada juego registra su propio wiring con su `document.addEventListener("DOMConte
 | **Jugadores** | Mínimo **5**, máximo **14** (los que reciben carta). Además hay **una persona narradora** que no recibe carta y maneja el móvil durante la noche. |
 | **Roles v1** | **Todos los del catálogo menos la Abuela** (fusionada con el Sindicato, ver §4). |
 | **Sindicato de Vivienda** | Fusión Sindicato+Abuela: **NO protege cada noche**. Su único poder es **un solo uso** de «salvar al desahuciado de esta noche» (ve quién ha caído y decide si gastarlo). El botón se gasta y queda deshabilitado para siempre. |
-| **Plataforma de Alquiler Vacacional** | **Opción A (Pisoturista)**: cada noche convierte la casa de un jugador en piso turístico → ese jugador **no vota** en la asamblea del día siguiente. Gana con los buitres. |
+| **Plataforma de Alquiler Vacacional** | **Opción A (Pisoturista)**: cada noche convierte la casa de un jugador en piso turístico → ese jugador **no vota** en la asamblea del día siguiente. Gana con los buitres, pero **no sabe quiénes son ni ellos la conocen** (cambiado en v3.9: antes abría los ojos con ellos la noche 1). |
 | **Concejal de Urbanismo** | **No es una carta**: se elige por **votación inicial a mano alzada**, con una pantalla en la app para registrar quién es. Voto doble + desempata. **Sin** poder de recalificar. Compatible con tener rol secreto. |
 | **Influencer Inmobiliario** | Si la asamblea lo expulsa, **gana él y la partida continúa** (la app anuncia su victoria personal, queda eliminado y se sigue jugando hasta que gane un bando). Si lo desahucian de noche, no gana. |
 | **Desahuciados** | **Eliminados clásicos**: dejan de jugar, la app ya no los ofrece como objetivo ni les da turno. (Nada de la variante «turistas».) |
@@ -144,7 +144,7 @@ la noche → «**la ciudad duerme…**».
 | 🏦 **Fondo Buitre** (nº configurable) | Buitres | Cada noche eligen juntos a un vecino al que **desahuciar**. Se reconocen la primera noche. |
 | 🧾 **Hacienda** | Vecinos | Cada noche **inspecciona** a un jugador: la app dice si es fondo buitre o no. La **Plataforma sale «inocente»** (como el traidor clásico). |
 | ✊ **Sindicato de Vivienda** | Vecinos | Cada noche despierta y **ve quién ha sido desahuciado**. Tiene **UN solo uso** en toda la partida: **salvarlo** (convoca una cacerolada). Botón que se gasta y queda deshabilitado. |
-| 🧳 **Plataforma de Alquiler Vacacional** | Buitres (sin desahuciar) | Conoce a los buitres (abre los ojos con ellos la 1ª noche). Cada noche convierte la casa de alguien en **piso turístico**: ese jugador **no vota** al día siguiente. |
+| 🧳 **Plataforma de Alquiler Vacacional** | Buitres (sin desahuciar) | **No** conoce a los buitres ni ellos a ella (v3.9). Cada noche convierte la casa de alguien en **piso turístico**: ese jugador **no vota** al día siguiente. |
 | 🛠️ **El Okupa** | Vecinos | La **primera** vez que los buitres lo desahucian, **no cae** («lo intentaron, pero sigue dentro»). La segunda, sí. |
 | 🏗️ **El Tasador** | Vecinos | Si es eliminado (de noche o por la asamblea), **se lleva a alguien por delante**: aparece una pantalla para que elija. |
 | 📱 **Influencer Inmobiliario** | Independiente | Gana si la asamblea lo expulsa. La partida continúa sin él. |
@@ -169,8 +169,8 @@ la noche → «**la ciudad duerme…**».
 5. **Noche** (`zt-noche`): «La ciudad duerme». El móvil lo coge **la persona
    narradora**, que lee y pulsa. Turnos en **orden fijo**, solo de roles **vivos**:
    1. *(solo noche 1)* 🤝 Inmobiliaria: elige a los dos compañeros de piso.
-   2. 🏦 Buitres (+ 🧳 Plataforma abre los ojos con ellos la noche 1 para
-      reconocerse): eligen víctima en una lista de vivos.
+   2. 🏦 Buitres: eligen víctima en una lista de vivos. (La Plataforma NO abre
+      los ojos con ellos: no se conocen, v3.9.)
    3. 🧳 Plataforma: elige a quién deja **sin voto** mañana.
    4. 🧾 Hacienda: elige a quién inspeccionar → la app muestra el resultado.
    5. ✊ Sindicato: la app le enseña **quién ha caído esta noche** y ofrece dos
@@ -454,3 +454,83 @@ El corazón del juego: la secuencia de turnos nocturnos que maneja la persona na
 - PWA funcionando (manifest, `sw.js`, iconos).
 - «Zona Tensionada»: **sin empezar**. Este documento es su plan. Empezar por la
   **Fase 0 (arte de las cartas)**.
+
+---
+
+## 10. Estado de la implementación (actualizado, v3.9)
+
+**Cambio de metodología** (pedido por el usuario): el asistente ha montado el
+andamiaje de TODAS las fases de golpe; el usuario va completando los TODOs
+fase a fase, probando cada una. Cada TODO tiene su explicación completa en un
+comentario justo encima del hueco.
+
+### Hecho por el asistente (sin TODOs)
+
+- **Fase 0**: 13 cartas + reverso en `img/zona/` (`generar_cartas.py`).
+- **Fase 1**: tarjeta del hub, 7 pantallas `zt-*`, registro del juego (el
+  TODO 1.1 lo completó el usuario).
+- Pantalla de jugadores completa (stepper 5–14, nombres, validación de vacíos
+  y repetidos). Pantalla de config (stepper de buitres, 7 interruptores con
+  listener único, presets `ZT_PRESETS` como datos).
+- `data/zona/roles.js`: catálogo `ZT_ROLES` con banderas + `ZT_IDENTIDADES`
+  (14) + `ztCartaDeJugador()` (elige entre los 5 artes de vecino).
+- `data/zona/textos.js`: `ZT_TEXTOS` con variantes por evento (placeholders;
+  los definitivos los escribe el usuario aquí) + `ztTexto(clave, nombre)`.
+- Flujo de noche (`js/zona/noche.js`): intro, render de turnos desde el
+  catálogo, interacciones de buitres/Plataforma/Hacienda/Sindicato/Inmobiliaria
+  (recogen intenciones), limpieza del DOM sensible.
+- Flujo de día (`js/zona/dia.js`): amanecer con anuncios, `ztContinuarDia()`
+  (venganza del Tasador → victoria → sucesor del Concejal → botón), votación,
+  fin de partida con menciones. Concejal reutilizable para el sucesor.
+- Llamadas a guardar/borrar YA colocadas (no-op hasta el TODO 8.1); botón
+  «Continuar» conectado.
+- Decisiones aplicadas de los TBD: al expulsar se revela el **rol exacto**; si
+  cae el Concejal se elige **sucesor** con la misma pantalla (o «Sin Concejal»);
+  candidatos a expulsión = vivos **con voto** (§4.3).
+
+### TODOs pendientes del usuario (orden recomendado)
+
+| TODO | Archivo | Función/hueco |
+|---|---|---|
+| 2.1 | `css/estilos.css` | Interruptor iOS (`.zt-switch…`, solo CSS) |
+| 2.2 | `js/zona/main.js` | `ztPresetPara` + `ztAplicarPreset` |
+| 3.1 | `js/zona/main.js` | `ztConstruirMazo` |
+| 3.2 | `js/zona/main.js` | `ztValidarConfig` + `ztRepartirCartas` |
+| 4.1 | `js/zona/main.js` | `ztRepartoOcultarYPasar` |
+| 4.2 | `js/zona/main.js` | `ztRepartoVerCarta` |
+| 5.1 | `js/zona/noche.js` | `ztConstruirColaTurnos` |
+| 5.2 | `js/zona/noche.js` | `ztResolverNoche` |
+| 5.3 | `js/zona/noche.js` | `ztActualizarBotonCacerolada` |
+| 6.1 | `js/zona/dia.js` | `ztEliminar` (cola de cascadas) |
+| 6.2 | `js/zona/dia.js` | `ztComprobarVictoria` |
+| 7.1 | `js/zona/dia.js` | `ztRenderListaFinal` |
+| 8.1 | `js/zona/main.js` | `ztGuardar/ztCargar/ztHayPartidaGuardada/ztBorrar/ztReanudar` |
+
+Hasta dónde se puede probar según lo completado: con 3.x se llega al reparto;
+con 4.x a la primera noche; con 5.x al amanecer; con 6.x se juega la partida
+entera; 7.1 pinta la lista final; 8.1 añade el «Continuar». Al publicar
+cambios, subir `CACHE` en `sw.js` y `APP_VERSION` en `js/nucleo/arranque.js`
+(van por la v3.9).
+
+### Pulido v3.9 (hecho por el asistente)
+
+- **Cartas de vecino sin repetir**: el reparto asigna el arte (vecino-1..5)
+  por bolsa barajada; solo se repite arte cuando ya han salido los cinco.
+- **Identidades ligadas al arte**: `ZT_IDENTIDADES` ahora es un diccionario
+  por carta (3 variantes acordes con cada dibujo); se elige al azar sin repetir.
+- **Fix `hidden` en el reparto**: `.zt-vista { display: flex }` pisaba el
+  atributo `hidden` → se veía la vista de la carta (icono de imagen rota, el
+  "emoji") y su «Ocultar y pasar» dejaba pasar sin revelar. Regla
+  `.zt-vista[hidden]` añadida; además la imagen se limpia con
+  `removeAttribute("src")` (un `src=""` pinta el icono de imagen rota).
+- **Plataforma en secreto**: ya no se reconoce con los buitres (textos y turno
+  actualizados; ver §3, §4.2 y §4.3).
+- **Pantalla final**: titular corto («Ganan los Fondos Buitre 🏦»…) + frase
+  paródica debajo (`#zt-fin-frase`); la lista final sustituye los emojis por
+  estados con color: Ganador (verde), Desahuciado (rojo) y términos medios en
+  ámbar (Victoria personal del Influencer, Ganador desahuciado, Derrotado).
+- **Inmobiliaria**: la primera persona seleccionada se marca con un contorno
+  verde visible (el azul anterior no se distinguía del botón).
+- **Concejal caído**: el sucesor se elige AL PULSAR el botón de avanzar
+  (tras leer el resumen del amanecer o de la asamblea), no en mitad de él
+  (`ztAvanzarDia` en `js/zona/dia.js`).

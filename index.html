@@ -386,52 +386,156 @@
     <!--  la clase "activa" es visible (js/nucleo/pantallas.js). -->
     <!-- ======================================================= -->
 
-    <!-- Nº y nombres de jugadores (5–14). La rellena la Fase 2. -->
+    <!-- Nº y nombres de jugadores (5–14). -->
     <section class="pantalla" data-pantalla="zt-jugadores">
       <h1>Zona Tensionada</h1>
-      <p class="ayuda">Jugadores: stepper (5–14) y nombres. (Fase 2)</p>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <p>¿Cuántos jugáis? (aparte, una persona hará de narradora)</p>
+      <div class="stepper" data-stepper="zt-jugadores">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="zt-valor-num-jugadores">5</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Escribe sus nombres:</p>
+      <div class="lista-scroll" id="zt-lista-nombres"></div>
+      <p class="error" id="zt-error-jugadores"></p>
+      <!-- Solo visible si hay una partida guardada reanudable (Fase 8). -->
+      <button type="button" id="zt-btn-continuar" hidden>Continuar partida</button>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" id="zt-btn-jugadores-siguiente">Siguiente</button>
+      </div>
     </section>
 
-    <!-- Nº de buitres + interruptores de cartas especiales. La rellena la Fase 2. -->
+    <!-- Nº de buitres + interruptores de cartas especiales (con presets del §5). -->
     <section class="pantalla" data-pantalla="zt-config">
       <h1>Configuración de la partida</h1>
-      <p class="ayuda">Buitres e interruptores de cartas especiales. (Fase 2)</p>
-      <button type="button" class="secundario" data-volver="zt-jugadores">Atrás</button>
+      <p>¿Cuántos fondos buitre?</p>
+      <div class="stepper" data-stepper="zt-buitres">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="zt-valor-num-buitres">2</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Cartas especiales en juego:</p>
+      <!-- Una fila por carta especial: nombre + interruptor. El checkbox lleva
+           data-especial con la clave que usa ztEstado.config.especiales, para que
+           un solo listener maneje los siete (ver ztConectarConfig). -->
+      <div class="lista-scroll" id="zt-lista-especiales">
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">Hacienda</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-hacienda" data-especial="hacienda" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">Sindicato de Vivienda</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-sindicato" data-especial="sindicato" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">Plataforma Vacacional</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-plataforma" data-especial="plataforma" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">El Okupa</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-okupa" data-especial="okupa" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">El Tasador</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-tasador" data-especial="tasador" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">Influencer Inmobiliario</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-influencer" data-especial="influencer" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+        <div class="zt-especial">
+          <span class="zt-especial-nombre">Inmobiliaria</span>
+          <label class="zt-switch">
+            <input type="checkbox" id="zt-esp-inmobiliaria" data-especial="inmobiliaria" />
+            <span class="zt-switch-pista"></span>
+          </label>
+        </div>
+      </div>
+      <p class="error" id="zt-error-config"></p>
+      <div class="fila-botones">
+        <button type="button" class="secundario" data-volver="zt-jugadores">Atrás</button>
+        <button type="button" id="zt-btn-repartir">Repartir cartas</button>
+      </div>
     </section>
 
-    <!-- Revelación de roles pasando el móvil de mano en mano. La rellena la Fase 4. -->
+    <!-- Revelación de roles (Fase 4): el móvil pasa de mano en mano. Dos
+         sub-vistas en la misma pantalla; el JS enseña una u otra y VACÍA el
+         contenido sensible al ocultar (criterio §6). Sin botón «Atrás»: con las
+         cartas repartidas no hay marcha atrás que no rompa la partida. -->
     <section class="pantalla" data-pantalla="zt-reparto">
-      <h1>Reparto de cartas</h1>
-      <p class="ayuda">«NOMBRE, coge el móvil» ↔ carta + efecto. (Fase 4)</p>
-      <button type="button" class="secundario" data-volver="zt-config">Atrás</button>
+      <div class="zt-vista" id="zt-reparto-vista-nombre">
+        <p class="ayuda">Pásale el móvil a…</p>
+        <h1 id="zt-reparto-nombre"></h1>
+        <p class="ayuda">Que nadie más mire la pantalla.</p>
+        <button type="button" id="zt-btn-ver-carta">Ver mi carta</button>
+      </div>
+      <div class="zt-vista" id="zt-reparto-vista-carta" hidden>
+        <img class="zt-carta" id="zt-carta-img" src="" alt="Tu carta de rol" />
+        <h2 id="zt-rol-nombre"></h2>
+        <p class="zt-efecto" id="zt-rol-efecto"></p>
+        <button type="button" id="zt-btn-ocultar-carta">Ocultar y pasar</button>
+      </div>
     </section>
 
-    <!-- Registro del Concejal, elegido a mano alzada. La rellena la Fase 4. -->
+    <!-- Concejal de Urbanismo (Fase 4; también elige sucesor en la Fase 6).
+         La lista de nombres la pinta el JS (ztEntrarConcejal). -->
     <section class="pantalla" data-pantalla="zt-concejal">
-      <h1>Concejal de Urbanismo</h1>
-      <p class="ayuda">Votad a mano alzada y registrad quién es. (Fase 4)</p>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <h1>Concejal de Urbanismo 🏛️</h1>
+      <p class="ayuda" id="zt-concejal-texto"></p>
+      <div class="lista-scroll" id="zt-concejal-lista"></div>
+      <button type="button" class="secundario" id="zt-btn-concejal-nadie">Sin Concejal</button>
     </section>
 
-    <!-- Turnos nocturnos que maneja la persona narradora. La rellena la Fase 5. -->
+    <!-- La noche (Fase 5): la maneja la persona narradora. Carta + efecto del
+         rol arriba, la instrucción que se lee en alto, y la acción debajo
+         (lista de objetivos o botones, creados por JS según el turno). -->
     <section class="pantalla" data-pantalla="zt-noche">
-      <h1>La ciudad duerme…</h1>
-      <p class="ayuda">Cola de turnos nocturnos (buitres, Hacienda…). (Fase 5)</p>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <h1 id="zt-noche-titulo">La ciudad duerme…</h1>
+      <img class="zt-carta zt-carta-turno" id="zt-noche-carta" src="" alt="" hidden />
+      <p class="zt-efecto" id="zt-noche-efecto"></p>
+      <p class="ayuda" id="zt-noche-instruccion"></p>
+      <div class="lista-scroll" id="zt-noche-objetivos"></div>
+      <p id="zt-noche-resultado"></p>
+      <div class="fila-botones" id="zt-noche-acciones"></div>
     </section>
 
-    <!-- Amanecer y votación de la asamblea. La rellena la Fase 6. -->
+    <!-- El día (Fase 6): amanecer con anuncios paródicos y registro de la
+         votación. La misma pantalla sirve para la venganza del Tasador
+         (ztContinuarDia decide qué toca en cada momento). -->
     <section class="pantalla" data-pantalla="zt-dia">
-      <h1>Amanece en el barrio</h1>
-      <p class="ayuda">Resultado de la noche y votación de la asamblea. (Fase 6)</p>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <h1 id="zt-dia-titulo">Amanece en el barrio</h1>
+      <div class="lista-scroll" id="zt-dia-anuncios"></div>
+      <p class="ayuda" id="zt-dia-ayuda"></p>
+      <div class="lista-scroll" id="zt-dia-lista"></div>
+      <div class="fila-botones" id="zt-dia-acciones"></div>
     </section>
 
-    <!-- Victoria del bando ganador + roles revelados. La rellena la Fase 7. -->
+    <!-- Fin de la partida (Fase 7): titular del bando ganador, menciones y la
+         lista completa de roles revelados (TODO 7.1). -->
     <section class="pantalla" data-pantalla="zt-fin">
-      <h1>Fin de la partida 🏁</h1>
-      <p class="ayuda">Bando ganador y lista de roles revelados. (Fase 7)</p>
+      <h1 id="zt-fin-titulo"></h1>
+      <p class="zt-efecto" id="zt-fin-frase"></p>
+      <p class="ayuda" id="zt-fin-menciones"></p>
+      <div class="lista-scroll" id="zt-fin-lista"></div>
       <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
     </section>
 
@@ -456,8 +560,12 @@
   <script src="data/ruleta/tematicas.js"></script>
   <script src="js/ruleta/main.js"></script>
 
-  <!-- Zona Tensionada (sus datos, data/zona/, llegan en la Fase 3) -->
+  <!-- Zona Tensionada (datos primero; main antes que noche/dia, que usan sus helpers) -->
+  <script src="data/zona/roles.js"></script>
+  <script src="data/zona/textos.js"></script>
   <script src="js/zona/main.js"></script>
+  <script src="js/zona/noche.js"></script>
+  <script src="js/zona/dia.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
   <script src="js/nucleo/arranque.js"></script>

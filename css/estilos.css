@@ -313,6 +313,160 @@ button.secundario:hover {
   text-align: center;
 }
 
+/* ==========================================================
+   Zona Tensionada: fila de carta especial + interruptor iOS
+   ========================================================== */
+
+/* Fila: nombre a la izquierda, interruptor a la derecha (andamiaje ya hecho). */
+.zt-especial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+}
+
+.zt-especial-nombre {
+  font-weight: 600;
+}
+
+/* El interruptor estilo iOS: un checkbox real (accesible, oculto solo
+   visualmente) + una pista deslizante que reacciona a su estado con el
+   selector `input:checked + .zt-switch-pista`. Cero JavaScript para el
+   aspecto; la lógica de guardar el valor en ztEstado vive en main.js.
+
+   - .zt-switch: contenedor `position:relative` (referencia para la pista y la
+     bola). Al ser un <label>, tocar en cualquier punto conmuta el checkbox.
+   - .zt-switch input: oculto con opacity:0 + tamaño 0, NUNCA con
+     display:none (eso lo sacaría del recorrido de teclado).
+   - .zt-switch-pista: la pista visible (inset:0 sobre el contenedor), con
+     forma de píldora y transición en el color de fondo.
+   - .zt-switch-pista::after: la bola, generada sin HTML extra; se mueve con
+     `transform: translateX()` en vez de `left`, para que la animación no
+     dispare recálculos de layout.
+   - :focus-visible: anillo de foco visible al navegar con teclado (Tab). */
+
+.zt-switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.zt-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.zt-switch-pista {
+  position: absolute;
+  inset: 0;
+  background: var(--color-fondo-alt);
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+
+.zt-switch-pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 150ms ease;
+}
+
+.zt-switch input:checked + .zt-switch-pista {
+  background: var(--color-acento);
+}
+
+.zt-switch input:checked + .zt-switch-pista::after {
+  transform: translateX(20px);
+}
+
+.zt-switch input:focus-visible + .zt-switch-pista {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+}
+
+
+/* Cartas pixel art del juego. image-rendering: pixelated evita que el navegador
+   difumine los píxeles al escalar (el arte se generó a 432×600). */
+.zt-carta {
+  width: min(52vw, 200px);
+  image-rendering: pixelated;
+  border-radius: 12px;
+}
+
+/* En los turnos de noche la carta acompaña, no protagoniza: más pequeña. */
+.zt-carta-turno {
+  width: 110px;
+}
+
+/* Sub-vistas del reparto (dentro de .pantalla, que ya es flex): cada vista
+   apila su contenido centrado, igual que la pantalla entera. */
+.zt-vista {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* El atributo hidden del HTML pierde contra el display de cualquier regla de
+   autor (y .zt-vista es flex): sin esto, la vista de la carta se veía DEBAJO
+   del nombre (con el icono de imagen rota del src vacío) y su botón «Ocultar
+   y pasar» permitía pasar de turno sin revelar el rol. */
+.zt-vista[hidden] {
+  display: none;
+}
+
+/* Texto del efecto de una carta (en la revelación y en los turnos). */
+.zt-efecto {
+  max-width: 30rem;
+  color: var(--color-texto-tenue);
+}
+
+/* Primera persona elegida por la Inmobiliaria (a la espera de la segunda).
+   En verde y con hueco: los botones ya son azules, así que un outline azul
+   pegado al borde no se distinguía de nada. */
+.zt-seleccionado {
+  outline: 3px solid var(--color-exito);
+  outline-offset: 2px;
+}
+
+/* Tarjetitas de anuncio del amanecer / votación / lista final. */
+.zt-anuncio {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  margin: 0;
+}
+
+/* Estado de cada jugador en la lista final: ganador en verde, desahuciado en
+   rojo y términos medios (victoria personal del Influencer, ganador caído,
+   derrotado en pie…) en ámbar. */
+.zt-fin-estado-ganador {
+  color: var(--color-exito);
+  font-weight: 700;
+}
+.zt-fin-estado-desahuciado {
+  color: var(--color-fallo);
+  font-weight: 700;
+}
+.zt-fin-estado-medio {
+  color: #ffce54;
+  font-weight: 700;
+}
+
+
 /* Reparto de equipos */
 .grupo-equipo {
   background: var(--color-superficie);
