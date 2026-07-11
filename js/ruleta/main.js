@@ -181,11 +181,12 @@ function rlElegirTematicas(cuantas) {
 // aleatorio guardado en rlEstado.centroSector. Se llama en CADA turno (aunque la
 // temática se repita) para que quien ya vio la revelación anterior no tenga ventaja.
 function rlNuevaPosicion() {
-  // Para que TODO el sector quepa dentro del semicírculo, el centro no puede
-  // pegarse a los extremos: debe quedar a RL_SECTOR_1PT (18°) de cada borde. Por
-  // eso el rango válido es [18°, 162°] (= [RL_SECTOR_1PT, 180 − RL_SECTOR_1PT]).
-  const min = RL_SECTOR_1PT;
-  const max = 180 - RL_SECTOR_1PT;
+  // El centro puede acercarse a los extremos hasta que la cuña de 3 toca el borde
+  // (a RL_SECTOR_3PTS = 6° de cada lado): así el 0 y el 10 también pueden valer 3.
+  // La cuña de 1 que se salga del semicírculo simplemente no se dibuja (la recorta
+  // rlPintarSector) y es inalcanzable, porque la aguja no pasa de 0°/180°.
+  const min = RL_SECTOR_3PTS;
+  const max = 180 - RL_SECTOR_3PTS;
 
   // Aleatorio en [min, max]: Math.random() da [0, 1); lo estiramos por el ancho del
   // rango y lo desplazamos con el mínimo. Puede ser decimal (no hace falta redondear).
@@ -305,19 +306,20 @@ function rlPintarSector() {
   const centro = rlEstado.centroSector;
   // Tres cuñas contiguas: lateral (1) · central (3) · lateral (1).
   const cunas = [
-    { desde: centro - RL_SECTOR_1PT, hasta: centro - RL_SECTOR_3PTS, clase: "rl-sector-1" },
-    { desde: centro - RL_SECTOR_3PTS, hasta: centro + RL_SECTOR_3PTS, clase: "rl-sector-3" },
-    { desde: centro + RL_SECTOR_3PTS, hasta: centro + RL_SECTOR_1PT, clase: "rl-sector-1" },
+    { desde: centro - RL_SECTOR_1PT, hasta: centro - RL_SECTOR_3PTS, clase: "rl-sector-1", texto: "1" },
+    { desde: centro - RL_SECTOR_3PTS, hasta: centro + RL_SECTOR_3PTS, clase: "rl-sector-3", texto: "3" },
+    { desde: centro + RL_SECTOR_3PTS, hasta: centro + RL_SECTOR_1PT, clase: "rl-sector-1", texto: "1" },
   ];
   cunas.forEach((c) => {
-    grupo.appendChild(rlCrearElementoSVG("path", { d: rlPathSector(c.desde, c.hasta), class: c.clase }));
+    // Con el centro cerca de un extremo, una cuña lateral puede salirse del
+    // semicírculo: se recorta a [0°, 180°] y, si no queda nada, no se dibuja.
+    const desde = Math.max(0, c.desde);
+    const hasta = Math.min(180, c.hasta);
+    if (desde >= hasta) return;
+    grupo.appendChild(rlCrearElementoSVG("path", { d: rlPathSector(desde, hasta), class: c.clase }));
+    // El número va en el centro angular de la parte VISIBLE de su cuña.
+    rlPintarNumero((desde + hasta) / 2, c.texto, grupo);
   });
-
-  // Números en el centro angular de cada cuña, a media altura del radio.
-  const medioLateral = (RL_SECTOR_3PTS + RL_SECTOR_1PT) / 2; // 12° → centro de la cuña lateral
-  rlPintarNumero(centro, "3", grupo);
-  rlPintarNumero(centro - medioLateral, "1", grupo);
-  rlPintarNumero(centro + medioLateral, "1", grupo);
 }
 
 // Coloca un número dentro de una cuña, en el ángulo dado y a 0.62·radio del centro.
