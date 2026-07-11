@@ -2,7 +2,7 @@
 // Debe cargarse el ÚLTIMO: al terminar muestra el hub de juegos.
 
 // Versión de la app. Al subirla, sube también CACHE en sw.js (otro contexto, no ve esto).
-const APP_VERSION = "4.1";
+const APP_VERSION = "4.1.1";
 
 // Textos de la ventana de información de cada juego (la ⓘ de las tarjetas del hub).
 const INFO_JUEGOS = {
@@ -20,7 +20,7 @@ const INFO_JUEGOS = {
       "Por turnos, cada jugador roba una carta del mazo y cumple su efecto: " +
       "puede afectarte a ti, a quien elijas o a todo el grupo. Algunos efectos " +
       "duran varios turnos (se consultan en el botón «Efectos»). La partida " +
-      "termina cuando se acaba el mazo.",
+      "termina cuando se acaba el mazo. Este juego trata de beber, y mucho.",
   },
   ruleta: {
     titulo: "La Ruleta",
