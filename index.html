@@ -337,9 +337,9 @@
     <!-- Pantalla de juego: media ruleta + aguja (Fases 4–6). -->
     <section class="pantalla" data-pantalla="rl-juego">
       <div class="rl-ruleta-zona">
-        <!-- viewBox 200×120: semicírculo de radio 90 centrado en (100,100), boca
+        <!-- viewBox 200×106: semicírculo de radio 90 centrado en (100,100), boca
              arriba. Los grupos #rl-sector y #rl-aguja los rellena el JS. -->
-        <svg class="rl-ruleta" id="rl-svg" viewBox="0 0 200 120" role="img" aria-label="Ruleta">
+        <svg class="rl-ruleta" id="rl-svg" viewBox="0 0 200 106" role="img" aria-label="Ruleta">
           <defs>
             <!-- Gradiente azul de la tapa (le da algo de profundidad de "cubierta"). -->
             <linearGradient id="rl-grad-tapa" x1="0" y1="0" x2="0" y2="1">
@@ -354,10 +354,14 @@
           <g id="rl-sector"></g>
           <g id="rl-tapa"></g>
           <g id="rl-aguja"></g>
-          <!-- Palabras (polos) de la temática, a los lados de la base -->
-          <text class="rl-palabra" id="rl-palabra-izq" x="6" y="114" text-anchor="start"></text>
-          <text class="rl-palabra" id="rl-palabra-der" x="194" y="114" text-anchor="end"></text>
         </svg>
+        <!-- Palabras (polos) de la temática. Fuera del SVG porque el texto SVG no
+             hace salto de línea: aquí cada polo tiene reservada su mitad del ancho
+             y, si es largo, baja de línea sin chocar con el otro. -->
+        <div class="rl-palabras">
+          <span class="rl-palabra" id="rl-palabra-izq"></span>
+          <span class="rl-palabra" id="rl-palabra-der"></span>
+        </div>
       </div>
       <!-- "+X puntos para NOMBRE" (solo en el sub-estado "resultado"). -->
       <p class="rl-resultado" id="rl-resultado"></p>

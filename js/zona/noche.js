@@ -171,7 +171,7 @@ function ztTurnoHacienda() {
     const clave =
       jugador.rol === "buitre" ? "inspeccionCulpable" : "inspeccionInocente";
     document.getElementById("zt-noche-resultado").textContent =
-      `${jugador.nombre}: ${ztTexto(clave)}`;
+      ztTexto(clave, jugador.nombre);
     // Elección hecha: fuera la lista, y un botón para cerrar el turno.
     document.getElementById("zt-noche-objetivos").innerHTML = "";
     ztBotonNoche("Hacienda cierra los ojos", ztAvanzarTurno);

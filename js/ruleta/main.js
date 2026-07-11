@@ -21,13 +21,13 @@ const RL_JUGADORES_INICIAL = 2;
 const RL_SECTOR_3PTS = 6;   // a ≤ 6° del centro → 3 puntos (sector central, 12° de ancho)
 const RL_SECTOR_1PT = 18;   // a ≤ 18° del centro → 1 punto (laterales, 12° cada uno)
 
-// Geometría del dibujo SVG (coordenadas del viewBox 200×120). El semicírculo va
+// Geometría del dibujo SVG (coordenadas del viewBox 200×106). El semicírculo va
 // centrado en (cx, cy) con radio r, "boca arriba" (la base abajo).
 const RL_SVG_CX = 100;
 const RL_SVG_CY = 100;
 const RL_SVG_R = 90;
 const RL_SVG_ANCHO = 200; // ancho del viewBox (para convertir píxeles → coords del SVG)
-const RL_SVG_ALTO = 120;  // alto del viewBox
+const RL_SVG_ALTO = 106;  // alto del viewBox (debe coincidir con el de index.html)
 
 // Estado del juego. Al tenerlo todo dentro de un único objeto, los tres juegos no
 // se estorban. Se irá rellenando a lo largo de las fases.

@@ -1100,7 +1100,8 @@ button.secundario:hover {
 .rl-ruleta-zona {
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column; /* la ruleta arriba y las palabras justo debajo */
+  align-items: center;
 }
 .rl-ruleta {
   width: min(92vw, 460px);
@@ -1143,11 +1144,27 @@ button.secundario:hover {
   fill: var(--color-texto);
 }
 
-/* Palabras (polos) de la temática */
+/* Palabras (polos) de la temática, bajo la base de la ruleta. Cada polo tiene
+   reservada su mitad del ancho (flex: 1 1 0): un texto largo baja de línea
+   dentro de su mitad y nunca invade la del otro. */
+.rl-palabras {
+  width: min(92vw, 460px); /* mismo ancho que .rl-ruleta, para quedar alineadas */
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+}
 .rl-palabra {
-  fill: var(--color-texto-tenue);
-  font-size: 10px;
+  flex: 1 1 0;
+  color: var(--color-texto-tenue);
+  font-size: 0.85rem;
   font-weight: 600;
+  overflow-wrap: break-word; /* por si una sola palabra no cabe en su mitad */
+}
+#rl-palabra-izq {
+  text-align: left;
+}
+#rl-palabra-der {
+  text-align: right;
 }
 
 /* Tapa azul que cubre la cúpula y se destapa/oculta con una animación (JS). */

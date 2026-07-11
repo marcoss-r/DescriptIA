@@ -31,7 +31,6 @@ const RL_TEMATICAS = [
   { izquierda: "Cosas que haces cuando vas borracho", derecha: "Cosas que haces cuando estás sobrio" },
   { izquierda: "No cuernos", derecha: "Cuernos" },
   { izquierda: "Heterosexual", derecha: "Homosexual" },
-  { izquierda: "Inútil", derecha: "Útil" },
   { izquierda: "Villanos", derecha: "Héroes" },
   { izquierda: "Cosas de pobres", derecha: "Cosas de ricos" },
   { izquierda: "Blancos", derecha: "Negros" },
@@ -53,7 +52,6 @@ const RL_TEMATICAS = [
   { izquierda: "Mal olor", derecha: "Buen olor" },
   { izquierda: "Cosas de latinos", derecha: "Cosas de españoles" },
   { izquierda: "Mala serie", derecha: "Buena serie" },
-  { izquierda: "Mal olor", derecha: "Buen olor" },
   { izquierda: "Mal sonido", derecha: "Buen sonido" },
   { izquierda: "Religiones occidentales", derecha: "Religiones orientales" },
   { izquierda: "Occidental", derecha: "Oriental" },
@@ -182,4 +180,6 @@ const RL_TEMATICAS = [
   { izquierda: "Cosas que haces en un funeral", derecha: "Cosas que haces en una boda" },
   { izquierda: "Cosa que diría Taylor Swft", derecha: "Cosa que diría Adolfo el pintor" },
   { izquierda: "Cosa que diría la Rivers", derecha: "Cosa que diría ElXokas" },
+  { izquierda: "Persona que usa esteroides", derecha: "Persona que solo toma proteína" },
+  { izquierda: "Persona que le gusta drogarse", derecha: "Persona que ni bebe ni fuma" },
 ];
