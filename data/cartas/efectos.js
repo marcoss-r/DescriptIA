@@ -23,7 +23,7 @@ const CF_EFECTOS_POR_VALOR = {
   4: "Cuatro: Los jugadores deben decir a la vez un número del 1 al 4. Si otro jugador coincide con el que ha sacado la carta, bebe cuatro tragos. Si nadie coincide, el jugador que ha sacado la carta bebe un trago por jugador en la partida.",
   5: "Cinco: Todos los jugadores deben poner la mano en la mesa, el último en hacerlo bebe dos tragos.",
   6: "Seis: El jugador deberá ser ignorado durante una ronda, quien lo incumpla, deberá beber un trago.",
-  7: "Siete: El jugador elige a otro jugador que deberá cada vez que él lo tenga que hacer.",
+  7: "Siete: El jugador elige a otro jugador que beberá cada vez que él lo tenga que hacer.",
   "sota": "Sota: El jugador elige un tema. Todos deben decir una palabra relacionada con ese tema. El primero que se quede sin ideas o repita una palabra, bebe dos tragos.",
   "caballo": "Caballo: El jugador que ha sacado la carta comienza a beber y el jugador a su derecha debe seguirlo hasta que pare y así sucesivamente hasta que todos los jugadores hayan dejado de beber.",
   "rey": "Rey: El jugador echa un trago de su bebida en un vaso en el centro de la mesa. Si ya han salido todos los reyes, el jugador que saque el cuarto rey debe beberse el contenido del vaso central.",
