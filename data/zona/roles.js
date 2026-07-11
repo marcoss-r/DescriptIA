@@ -140,30 +140,41 @@ const ZT_IDENTIDADES = {
     "la del 4º con el carrito de la compra",
     "la que recoge los paquetes de todo el bloque",
     "la del portal de al lado que lo sabe todo",
+    "la que le da de comer a las palomas y tiene un nido en el balcón",
+    "la que se pasa las noches en el bingo",
   ],
   // vecino-2: joven con gorro, auriculares y monopatín.
   2: [
-    "el del 5º que hace parkour con el patinete",
+    "el del 5º que hace skate y sale con el patinete",
     "el del 2ºB que ensaya con la batería",
     "el que pone lavadoras a las 3 de la mañana",
+    "el que vuelve de fiesta ciego perdido y armando escándalo",
+    "el que se fuma unos leños que flipas y se pone a hablar con las farolas",
   ],
   // vecino-3: vecina regando la maceta del balcón.
   3: [
     "la del 2º que riega hasta el felpudo",
     "la de las plantas que invaden la escalera",
     "la que cuelga la fregona sobre tu balcón",
+    "la que tiene la casa llena de gatos",
+    "la cotilla que no se pierde un vídeo de Javi Hoyos",
+    "la que se pone a «aplaudir» todas las noches a las 2 de la mañana",
   ],
   // vecino-4: vecino paseando al perrillo antes de dormir.
   4: [
     "el del 1º que pasea al perro en pijama",
     "el que nunca saluda en el ascensor (su perro sí)",
     "el que se sabe el nombre de todos los perros del barrio (de los dueños, no)",
+    "el del 3º cuyo perro ladra a las 4 de la mañana y no le importa",
+    "el que deja que el perro mee en el felpudo de los vecinos",
   ],
   // vecino-5: abuelo de boina con bastón y periódico.
   5: [
     "el del 3º de la boina y el periódico",
     "el presidente de la comunidad (autoproclamado)",
     "el del banco de la plaza que opina de todo",
+    "el viejo verde que se pasa la vida en el bar",
+    "el que nunca deja a los niños jugar con la pelota pero se queja de que no sueltan el móvil"
   ],
 };
 
