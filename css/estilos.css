@@ -148,14 +148,16 @@ body {
   margin-top: 0.5rem;
 }
 
-/* Tarjeta-botón de cada juego */
+/* Tarjeta-botón de cada juego. Es "relative" para anclar la ⓘ a su esquina;
+   el padding derecho extra evita que el texto se meta debajo del icono. */
 .juego-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.25rem;
   width: 100%;
-  padding: 1.1rem 1.3rem;
+  padding: 1.1rem 2.8rem 1.1rem 1.3rem;
   text-align: left;
   background: var(--color-superficie);
   color: var(--color-texto);
@@ -176,6 +178,74 @@ body {
   font-size: 0.9rem;
   font-weight: 400;
   color: var(--color-texto-tenue);
+}
+
+/* ⓘ de cada tarjeta: es un <span> porque HTML no permite un botón dentro de
+   otro botón (arranque.js le pone el click con stopPropagation). */
+.juego-card-info {
+  position: absolute;
+  top: 50%;
+  right: 0.9rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--color-texto-tenue);
+  border-radius: 50%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-texto-tenue);
+}
+
+.juego-card-info:hover {
+  border-color: var(--color-acento);
+  color: var(--color-acento);
+}
+
+/* Ventana de información de un juego: overlay que cubre el hub y se cierra al
+   tocar en cualquier parte (mismo patrón que .cf-efectos-overlay). */
+.info-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(4, 8, 20, 0.6);
+}
+
+/* Igual que en cf-efectos: nuestro display:flex pisaría el display:none del
+   atributo `hidden`; esta regla devuelve la prioridad al estado oculto. */
+.info-overlay[hidden] {
+  display: none;
+}
+
+.info-panel {
+  width: min(90vw, 26rem);
+  max-height: 80%;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-fondo-alt);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-borde);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+.info-panel h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+  color: var(--color-texto);
+}
+
+.info-panel p {
+  margin: 0;
+  color: var(--color-texto-tenue);
+  line-height: 1.5;
 }
 
 /* ==========================================================
@@ -223,6 +293,29 @@ button.secundario {
 }
 
 button.secundario:hover {
+  background: var(--color-fondo-alt);
+}
+
+/* Botón de volver: flechita pequeña en la esquina superior izquierda de cada
+   pantalla. Fuera del flujo (absolute sobre .pantalla) para no chocar con el
+   contenido; respeta las safe areas igual que .cf-chip-efectos. */
+.boton-volver {
+  position: absolute;
+  top: calc(0.75rem + env(safe-area-inset-top));
+  left: calc(0.75rem + env(safe-area-inset-left));
+  z-index: 15;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.boton-volver:hover {
   background: var(--color-fondo-alt);
 }
 

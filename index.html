@@ -64,21 +64,36 @@
       <p>Elige un juego para empezar.</p>
       <div class="lista-juegos">
         <button type="button" class="juego-card" id="btn-juego-descriptia">
+          <!-- La ⓘ es un <span> (no puede haber un botón dentro de otro botón);
+               su click se captura en arranque.js con stopPropagation. -->
+          <span class="juego-card-info" data-info="descriptia" aria-label="Información de DescriptIA">i</span>
           <span class="juego-card-nombre">DescriptIA</span>
           <span class="juego-card-desc">Describe y adivina por equipos</span>
         </button>
         <button type="button" class="juego-card" id="btn-juego-cartas">
+          <span class="juego-card-info" data-info="cartas" aria-label="Información de Cartas de la Fortuna">i</span>
           <span class="juego-card-nombre">Cartas de la Fortuna</span>
           <span class="juego-card-desc">Roba una carta y cumple su efecto</span>
         </button>
         <button type="button" class="juego-card" id="btn-juego-ruleta">
+          <span class="juego-card-info" data-info="ruleta" aria-label="Información de La Ruleta">i</span>
           <span class="juego-card-nombre">La Ruleta</span>
           <span class="juego-card-desc">Adivina dónde cae el concepto en el espectro</span>
         </button>
         <button type="button" class="juego-card" id="btn-juego-zona">
+          <span class="juego-card-info" data-info="zona" aria-label="Información de Zona Tensionada">i</span>
           <span class="juego-card-nombre">Zona Tensionada</span>
           <span class="juego-card-desc">La ciudad duerme y los fondos buitre no</span>
         </button>
+      </div>
+
+      <!-- Ventana de información del juego: la abre la ⓘ de cada tarjeta y se
+           cierra tocando en cualquier parte (mismo patrón que cf-efectos). -->
+      <div class="info-overlay" id="info-juego" hidden>
+        <div class="info-panel">
+          <h2 id="info-juego-titulo"></h2>
+          <p id="info-juego-texto"></p>
+        </div>
       </div>
     </section>
 
@@ -89,7 +104,7 @@
       <button type="button" id="btn-continuar" hidden>Continuar partida</button>
       <button type="button" id="btn-nueva-partida">Nueva partida</button>
       <button type="button" id="btn-categorias-menu" class="secundario">Categorías</button>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
     <!-- Gestión de categorías: lista de categorías -->
@@ -102,7 +117,7 @@
       </div>
       <p class="error" id="lista-cat-error"></p>
       <div class="lista-scroll" id="lista-categorias-gestion"></div>
-      <button type="button" class="secundario" data-volver="inicio">Atrás</button>
+      <button type="button" class="boton-volver" data-volver="inicio" aria-label="Volver">←</button>
     </section>
 
     <!-- Gestión de categorías: tarjetas de una categoría (ver / editar) -->
@@ -111,7 +126,7 @@
       <div class="lista-scroll" id="detalle-tarjetas"></div>
       <p class="error" id="detalle-error"></p>
       <div class="fila-botones">
-        <button type="button" class="secundario" id="btn-detalle-atras">Atrás</button>
+        <button type="button" class="boton-volver" id="btn-detalle-atras" aria-label="Volver">←</button>
         <button type="button" id="btn-editar-categoria">Editar</button>
       </div>
     </section>
@@ -129,7 +144,7 @@
       <div class="lista-scroll" id="lista-nombres-jugadores"></div>
       <p class="error" id="error-jugadores"></p>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="inicio">Atrás</button>
+        <button type="button" class="boton-volver" data-volver="inicio" aria-label="Volver">←</button>
         <button type="button" id="btn-jugadores-siguiente">Siguiente</button>
       </div>
     </section>
@@ -147,7 +162,7 @@
       <p>Reparto al azar:</p>
       <div class="lista-scroll" id="reparto-equipos"></div>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="config-jugadores">Atrás</button>
+        <button type="button" class="boton-volver" data-volver="config-jugadores" aria-label="Volver">←</button>
         <button type="button" id="btn-rebarajar">🔀 Rebarajar</button>
         <button type="button" id="btn-equipos-siguiente">Siguiente</button>
       </div>
@@ -159,7 +174,7 @@
       <div class="lista-scroll" id="lista-nombres-equipos"></div>
       <p class="error" id="error-nombres-equipos"></p>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="config-equipos">Atrás</button>
+        <button type="button" class="boton-volver" data-volver="config-equipos" aria-label="Volver">←</button>
         <button type="button" id="btn-nombres-equipos-siguiente">Siguiente</button>
       </div>
     </section>
@@ -171,7 +186,7 @@
       <div class="lista-scroll" id="lista-categorias"></div>
       <p class="error" id="error-categorias"></p>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="config-nombres-equipos">Atrás</button>
+        <button type="button" class="boton-volver" data-volver="config-nombres-equipos" aria-label="Volver">←</button>
         <button type="button" id="btn-categorias-siguiente">Empezar</button>
       </div>
     </section>
@@ -246,7 +261,7 @@
       <!-- Solo visible si hay una partida guardada reanudable (lo decide JS) -->
       <button type="button" id="cf-btn-continuar" hidden>Continuar partida</button>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
         <button type="button" id="cf-btn-empezar">Empezar</button>
       </div>
     </section>
@@ -292,14 +307,14 @@
         </div>
       </div>
 
-      <button type="button" class="secundario" data-volver="cf-config">Atrás</button>
+      <button type="button" class="boton-volver" data-volver="cf-config" aria-label="Volver">←</button>
     </section>
 
     <!-- Fin de la partida: se acaba el mazo -->
     <section class="pantalla" data-pantalla="cf-fin">
       <h1>Se acabó el mazo 🎉</h1>
       <!-- Al acabarse el mazo, volver al hub (data-volver navega solo, sin JS). -->
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
     <!-- ======================================================= -->
@@ -321,7 +336,7 @@
       <!-- Solo visible si hay una partida guardada reanudable (lo decide el JS). -->
       <button type="button" id="rl-btn-continuar" hidden>Continuar partida</button>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
         <button type="button" id="rl-btn-empezar">Empezar</button>
       </div>
     </section>
@@ -331,7 +346,7 @@
       <h1>Turno de: <span id="rl-turno-nombre"></span></h1>
       <p class="ayuda">Tápate los ojos o date la vuelta. El resto, pulsad «Ver ruleta» cuando estéis listos.</p>
       <button type="button" id="rl-btn-ver-ruleta">Ver ruleta</button>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
     <!-- Pantalla de juego: media ruleta + aguja (Fases 4–6). -->
@@ -371,7 +386,7 @@
         <button type="button" id="rl-btn-confirmar">Confirmar</button>
         <button type="button" id="rl-btn-siguiente">Siguiente</button>
       </div>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
     <!-- Fin de la partida: ranking por puntos (Fase 7). -->
@@ -379,7 +394,7 @@
       <h1>Fin de la partida 🏁</h1>
       <!-- Lo rellena rlRenderRanking() reutilizando las clases .podio-* de DescriptIA. -->
       <div class="lista-scroll" id="rl-ranking"></div>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
     <!-- ======================================================= -->
@@ -405,7 +420,7 @@
       <!-- Solo visible si hay una partida guardada reanudable (Fase 8). -->
       <button type="button" id="zt-btn-continuar" hidden>Continuar partida</button>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+        <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
         <button type="button" id="zt-btn-jugadores-siguiente">Siguiente</button>
       </div>
     </section>
@@ -476,7 +491,7 @@
       </div>
       <p class="error" id="zt-error-config"></p>
       <div class="fila-botones">
-        <button type="button" class="secundario" data-volver="zt-jugadores">Atrás</button>
+        <button type="button" class="boton-volver" data-volver="zt-jugadores" aria-label="Volver">←</button>
         <button type="button" id="zt-btn-repartir">Repartir cartas</button>
       </div>
     </section>
@@ -540,7 +555,7 @@
       <p class="zt-efecto" id="zt-fin-frase"></p>
       <p class="ayuda" id="zt-fin-menciones"></p>
       <div class="lista-scroll" id="zt-fin-lista"></div>
-      <button type="button" class="secundario" data-volver="fiesta">← FIEsta</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
   </div>
