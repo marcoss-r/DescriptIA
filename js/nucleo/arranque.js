@@ -2,7 +2,7 @@
 // Debe cargarse el ÚLTIMO: al terminar muestra el hub de juegos.
 
 // Versión de la app. Al subirla, sube también CACHE en sw.js (otro contexto, no ve esto).
-const APP_VERSION = "4.1.1";
+const APP_VERSION = "4.9.8";
 
 // Textos de la ventana de información de cada juego (la ⓘ de las tarjetas del hub).
 const INFO_JUEGOS = {
@@ -38,6 +38,15 @@ const INFO_JUEGOS = {
       "fondos buitre desahucian a alguien del barrio; de día, el vecindario " +
       "debate y vota a quién expulsar. Las cartas especiales (Hacienda, el " +
       "Okupa, el Tasador…) cambian cada partida.",
+  },
+  blackjack: {
+    titulo: "21 Arcanos",
+    texto:
+      "Blackjack con dos modos. En el Clásico juegas tú solo contra la banca con " +
+      "una banca de fichas que se guarda entre partidas. En el modo Arcade " +
+      "compiten hasta 5 jugadores en un solo móvil: cada uno apuesta en secreto en su " +
+      "turno y, al empezar la partida, tres arcanos de tarot fijan reglas de mesa " +
+      "que valen para todos. Un interruptor de modo fiesta 🍻 añade tragos encima.",
   },
 };
 

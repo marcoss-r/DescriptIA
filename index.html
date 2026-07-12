@@ -85,6 +85,11 @@
           <span class="juego-card-nombre">Zona Tensionada</span>
           <span class="juego-card-desc">La ciudad duerme y los fondos buitre no</span>
         </button>
+        <button type="button" class="juego-card" id="btn-juego-blackjack">
+          <span class="juego-card-info" data-info="blackjack" aria-label="Información de 21 Arcanos">i</span>
+          <span class="juego-card-nombre">21 Arcanos</span>
+          <span class="juego-card-desc">Blackjack con arcanos que cambian la mesa</span>
+        </button>
       </div>
 
       <!-- Ventana de información del juego: la abre la ⓘ de cada tarjeta y se
@@ -558,6 +563,279 @@
       <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
     </section>
 
+    <!-- ======================================================= -->
+    <!--  21 Arcanos (blackjack) — esqueleto (Fase 2)            -->
+    <!--                                                         -->
+    <!--  Andamiaje: las siete pantallas del juego, vacías por   -->
+    <!--  ahora. Cada una indica en qué fase se rellena. La      -->
+    <!--  navegación (entrar desde el hub, elegir modo, avanzar  -->
+    <!--  y volver) la conecta js/blackjack/main.js; los botones -->
+    <!--  «Atrás» con data-volver los resuelve el núcleo.        -->
+    <!-- ======================================================= -->
+
+    <!-- Menú: elegir modo de juego (entrada desde el hub). -->
+    <section class="pantalla" data-pantalla="bj-menu">
+      <h1>21 Arcanos</h1>
+      <p>Blackjack con tarot. Elige cómo jugar.</p>
+      <button type="button" id="bj-btn-clasico">Modo Clásico</button>
+      <button type="button" id="bj-btn-arcade">Modo Arcade</button>
+      <button type="button" class="secundario" id="bj-btn-reglas">Reglas de la mesa</button>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
+    </section>
+
+    <!-- Configuración del ruleset: toggles de reglas opcionales. La lista y el
+         resumen los pinta js/blackjack/main.js a partir de BJ_REGLAS. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-reglas">
+      <h1>Reglas de la mesa</h1>
+      <p class="ayuda">Reglas opcionales; valen para el Clásico y el Arcade.</p>
+      <div class="lista-scroll" id="bj-reglas-lista"></div>
+      <p class="bj-ruleset-resumen" id="bj-reglas-resumen"></p>
+      <button type="button" class="boton-volver" data-volver="bj-menu" aria-label="Volver al menú">←</button>
+    </section>
+
+    <!-- Modo Clásico: mesa contra la banca persistente. Toda la lógica y el
+         pintado van en js/blackjack/clasico.js; aquí solo el esqueleto de la mesa
+         con los huecos que rellena el JS y los controles de cada fase. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-clasico">
+      <!-- Cabecera: banca, cartas restantes del mazo y acceso a estadísticas. -->
+      <div class="bj-cabecera">
+        <div class="bj-dato" aria-label="Banca">🪙 <span id="bj-banca">100</span></div>
+        <div class="bj-dato" aria-label="Cartas en el mazo">🂠 <span id="bj-restantes">52</span></div>
+        <button type="button" class="secundario bj-btn-stats" id="bj-btn-stats" aria-label="Estadísticas">📊</button>
+      </div>
+
+      <!-- Mano del dealer (una carta boca abajo hasta la resolución). -->
+      <div class="bj-zona">
+        <div class="bj-zona-titulo">Dealer <span class="bj-total" id="bj-total-dealer"></span></div>
+        <div class="bj-cartas" id="bj-cartas-dealer"></div>
+      </div>
+
+      <!-- Resultado de la mano + variación de fichas (animación de "+X / −X"). -->
+      <div class="bj-resultado" id="bj-resultado"></div>
+      <div class="bj-delta" id="bj-delta"></div>
+
+      <!-- Mano(s) del jugador: una normalmente, dos al dividir (split). El JS pinta
+           cada mano dentro de #bj-manos-jugador con su total y su apuesta. -->
+      <div class="bj-zona">
+        <div class="bj-zona-titulo">Tú</div>
+        <div class="bj-manos" id="bj-manos-jugador"></div>
+      </div>
+
+      <!-- Controles: solo se ve el bloque de la fase actual (lo decide el JS). -->
+
+      <!-- Fase "apostando": stepper de apuesta + repartir. -->
+      <div class="bj-controles" id="bj-zona-apuesta">
+        <div class="bj-apuesta-fila">
+          <span class="ayuda">Apuesta</span>
+          <div class="stepper" data-stepper="bj-apuesta">
+            <button type="button" class="stepper-btn" data-paso="-1">−</button>
+            <span class="stepper-valor" id="bj-valor-apuesta">5</span>
+            <button type="button" class="stepper-btn" data-paso="1">+</button>
+          </div>
+        </div>
+        <button type="button" id="bj-btn-repartir">Repartir</button>
+      </div>
+
+      <!-- Fase "seguro": el dealer enseña un As (solo si la regla está activa). -->
+      <div class="bj-controles" id="bj-zona-seguro" hidden>
+        <p class="ayuda">El dealer enseña un As. ¿Contratas seguro? Cuesta <span id="bj-seguro-coste"></span>.</p>
+        <div class="fila-botones">
+          <button type="button" class="secundario" id="bj-btn-seguro-no">No</button>
+          <button type="button" id="bj-btn-seguro-si">Sí, asegurar</button>
+        </div>
+      </div>
+
+      <!-- Fase "jugando": acciones del jugador según el ruleset. Botones redondos de
+           una letra/símbolo, en dos filas escalonadas (3 arriba, 2 abajo). -->
+      <div class="bj-controles bj-acciones" id="bj-zona-acciones" hidden>
+        <button type="button" class="bj-accion-pedir" id="bj-btn-pedir" aria-label="Pedir" title="Pedir">✓</button>
+        <button type="button" class="bj-accion-plantarse" id="bj-btn-plantarse" aria-label="Plantarse" title="Plantarse">✗</button>
+        <button type="button" class="bj-accion-doblar" id="bj-btn-doblar" aria-label="Doblar" title="Doblar">D</button>
+        <button type="button" class="bj-accion-dividir" id="bj-btn-dividir" aria-label="Dividir" title="Dividir">S</button>
+        <button type="button" class="bj-accion-rendirse" id="bj-btn-rendirse" aria-label="Rendirse" title="Rendirse">R</button>
+      </div>
+
+      <!-- Fase "resuelto": siguiente mano. -->
+      <div class="bj-controles" id="bj-zona-siguiente" hidden>
+        <button type="button" id="bj-btn-siguiente-mano">Siguiente mano</button>
+      </div>
+
+      <!-- Overlay de estadísticas: se cierra tocando el fondo (lo pinta el JS). -->
+      <div class="bj-overlay" id="bj-stats" hidden>
+        <div class="bj-overlay-panel" id="bj-stats-panel"></div>
+      </div>
+
+      <!-- Overlay de banca rota: NO se cierra tocando el fondo (hay que reiniciar). -->
+      <div class="bj-overlay" id="bj-banca-rota" hidden>
+        <div class="bj-overlay-panel">
+          <h2>Banca rota 💸</h2>
+          <p>Te has quedado sin fichas para la apuesta mínima.</p>
+          <button type="button" id="bj-btn-reiniciar-banca">Reiniciar banca (100)</button>
+        </div>
+      </div>
+
+      <button type="button" class="boton-volver" data-volver="bj-menu" aria-label="Volver al menú">←</button>
+    </section>
+
+    <!-- Modo Arcade («El Torneo»): nº de jugadores, pila, rondas y modo fiesta.
+         Los nombres y los steppers los maneja js/blackjack/arcade.js. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-arcade-config">
+      <h1>Modo Arcade</h1>
+      <p>¿Cuántos jugáis?</p>
+      <div class="stepper" data-stepper="bj-arcade-jugadores">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="bj-arcade-valor-jugadores">2</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <p>Escribe sus nombres:</p>
+      <div class="lista-scroll" id="bj-arcade-nombres"></div>
+
+      <div class="bj-config-fila" id="bj-arcade-fila-rondas">
+        <span class="bj-config-etiqueta">Rondas</span>
+        <div class="stepper" data-stepper="bj-arcade-rondas">
+          <button type="button" class="stepper-btn" data-paso="-1">−</button>
+          <span class="stepper-valor" id="bj-arcade-valor-rondas">8</span>
+          <button type="button" class="stepper-btn" data-paso="1">+</button>
+        </div>
+      </div>
+
+      <div class="bj-config-fila">
+        <span class="bj-config-etiqueta">Modo fiesta</span>
+        <label class="bj-switch">
+          <input type="checkbox" id="bj-arcade-fiesta" />
+          <span class="bj-switch-pista"></span>
+        </label>
+      </div>
+
+      <p class="ayuda" id="bj-arcade-nota"></p>
+      <p class="error" id="bj-arcade-error"></p>
+      <div class="fila-botones">
+        <button type="button" class="boton-volver" data-volver="bj-menu" aria-label="Volver al menú">←</button>
+        <button type="button" id="bj-btn-arcade-empezar">Empezar</button>
+      </div>
+    </section>
+
+    <!-- Pasar el móvil al siguiente jugador (solo multijugador). Sin botón «Atrás»:
+         con la ronda en marcha no hay marcha atrás que no la rompa. La mesa es
+         compartida: las apuestas ya no son secretas, solo se pasa el turno. -->
+    <section class="pantalla" data-pantalla="bj-arcade-pasar">
+      <p class="ayuda">El dealer enseña:</p>
+      <div class="bj-cartas" id="bj-pasar-dealer"></div>
+      <p class="ayuda">Pásale el móvil a…</p>
+      <h1 id="bj-pasar-nombre"></h1>
+      <p class="ayuda">Es su turno de jugar.</p>
+      <button type="button" id="bj-btn-pasar-listo">Estoy listo</button>
+    </section>
+
+    <!-- Apuesta del jugador de turno (mesa compartida: ya no es secreta). -->
+    <section class="pantalla con-scroll" data-pantalla="bj-arcade-apuesta">
+      <h1 id="bj-apuesta-nombre"></h1>
+      <div class="bj-cabecera">
+        <div class="bj-dato" aria-label="Tu pila">🪙 <span id="bj-apuesta-pila"></span></div>
+        <div class="bj-dato" aria-label="Ronda">Ronda <span id="bj-apuesta-ronda"></span></div>
+      </div>
+      <p class="ayuda">El dealer enseña:</p>
+      <div class="bj-cartas" id="bj-apuesta-dealer"></div>
+      <p class="ayuda" id="bj-apuesta-deuda"></p>
+      <p>Tu apuesta:</p>
+      <div class="stepper" data-stepper="bj-arcade-apuesta">
+        <button type="button" class="stepper-btn" data-paso="-1">−</button>
+        <span class="stepper-valor" id="bj-valor-apuesta-arcade">5</span>
+        <button type="button" class="stepper-btn" data-paso="1">+</button>
+      </div>
+      <button type="button" id="bj-btn-apostar">Apostar y jugar</button>
+    </section>
+
+    <!-- Tirada del destino: se revelan los 3 arcanos de la partida como
+         Pasado — Presente — Futuro y quedan como reglas de mesa. Lo pinta
+         js/blackjack/tarot.js (bjTarotMostrar). Sin botón «Atrás»: la tirada
+         ya está hecha y volver a configurar repetiría la partida. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-tarot">
+      <h1>La tirada del destino</h1>
+      <div class="bj-tarot-cartas" id="bj-tarot-cartas"></div>
+      <div class="bj-tarot-textos" id="bj-tarot-textos"></div>
+      <button type="button" id="bj-btn-tarot-continuar" hidden>A la mesa</button>
+    </section>
+
+    <!-- Mesa del Arcade: el jugador de turno juega su mano viendo la carta del
+         dealer. Sin botón «Atrás» (rompería la ronda). Lo pinta arcade.js. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-arcade">
+      <div class="bj-cabecera">
+        <div class="bj-dato" id="bj-arcade-turno-nombre"></div>
+        <div class="bj-dato" aria-label="Tu pila">🪙 <span id="bj-arcade-pila"></span></div>
+        <div class="bj-dato" aria-label="Cartas en el zapato">🂠 <span id="bj-arcade-restantes"></span></div>
+      </div>
+
+      <!-- Mesa compartida (Fase 9.2): barra scrolleable con el resto de jugadores
+           de la ronda, sus manos apiladas y (si ya jugaron) su apuesta. La rellena
+           bjArcadeRenderMesaJugadores; oculta en solitario. -->
+      <div class="bj-mesa-jugadores" id="bj-arcade-mesa-jugadores" hidden></div>
+
+      <div class="bj-zona">
+        <div class="bj-zona-titulo">Dealer <span class="bj-total" id="bj-arcade-total-dealer"></span></div>
+        <div class="bj-cartas" id="bj-arcade-cartas-dealer"></div>
+      </div>
+
+      <div class="bj-zona">
+        <div class="bj-zona-titulo">Tu mano</div>
+        <div class="bj-manos" id="bj-arcade-manos"></div>
+      </div>
+
+      <div class="bj-controles bj-acciones" id="bj-arcade-acciones">
+        <button type="button" class="bj-accion-pedir" id="bj-arcade-btn-pedir" aria-label="Pedir" title="Pedir">✓</button>
+        <button type="button" class="bj-accion-plantarse" id="bj-arcade-btn-plantarse" aria-label="Plantarse" title="Plantarse">✗</button>
+        <button type="button" class="bj-accion-doblar" id="bj-arcade-btn-doblar" aria-label="Doblar" title="Doblar">D</button>
+        <button type="button" class="bj-accion-dividir" id="bj-arcade-btn-dividir" aria-label="Dividir" title="Dividir">S</button>
+        <button type="button" class="bj-accion-rendirse" id="bj-arcade-btn-rendirse" aria-label="Rendirse" title="Rendirse">R</button>
+      </div>
+
+      <!-- Chip que despliega las reglas de mesa del tarot (mismo patrón que el
+           chip «Efectos» de Cartas de la Fortuna). El overlay se cierra tocando
+           en cualquier parte; lo rellena bjTarotConectarPanel. -->
+      <button type="button" class="secundario bj-tarot-chip" id="bj-btn-tarot-chip">🔮</button>
+      <div class="bj-overlay" id="bj-tarot-panel" hidden>
+        <div class="bj-overlay-panel">
+          <h2>Reglas de mesa</h2>
+          <div class="bj-tarot-panel-lista" id="bj-tarot-panel-lista"></div>
+        </div>
+      </div>
+
+      <!-- «Volver al menú»: abandona la partida en curso. No usa data-volver
+           porque antes confirma (abandonar pierde el torneo). Lo conecta arcade.js. -->
+      <button type="button" class="boton-volver" id="bj-btn-arcade-menu" aria-label="Volver al menú">←</button>
+    </section>
+
+    <!-- Resolución de la ronda: el dealer revela y roba, y se muestran las manos,
+         las apuestas (ya reveladas) y el pago de cada jugador. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-arcade-ronda">
+      <h1 id="bj-ronda-titulo">Ronda</h1>
+      <div class="bj-zona">
+        <div class="bj-zona-titulo">Dealer <span class="bj-total" id="bj-ronda-total-dealer"></span></div>
+        <div class="bj-cartas" id="bj-ronda-cartas-dealer"></div>
+      </div>
+      <div class="lista-scroll" id="bj-ronda-jugadores"></div>
+
+      <!-- Capa de modo fiesta 🍻 (Fase 8): las consecuencias de tragos de la ronda.
+           Se calculan de los resultados (§7) y se completan con los recordatorios
+           de los arcanos con capa [F]. Solo aparece con el modo fiesta activado;
+           lo rellena arcade.js (bjArcadeRenderFiesta). -->
+      <div class="bj-fiesta" id="bj-ronda-fiesta" hidden>
+        <div class="bj-fiesta-titulo">Tragos de la ronda</div>
+        <ul class="bj-fiesta-lista" id="bj-ronda-fiesta-lista"></ul>
+      </div>
+
+      <button type="button" id="bj-btn-ronda-siguiente">Siguiente ronda</button>
+    </section>
+
+    <!-- Fin de la partida: ranking (multijugador) o puntuación y récord (solitario).
+         Lo rellena arcade.js reutilizando las clases .podio-* de DescriptIA. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-fin">
+      <h1 id="bj-fin-titulo">Fin de la partida 🏁</h1>
+      <div class="lista-scroll" id="bj-fin-lista"></div>
+      <p class="ayuda" id="bj-fin-record"></p>
+      <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
+    </section>
+
   </div>
 
   <!-- Núcleo compartido -->
@@ -585,6 +863,16 @@
   <script src="js/zona/main.js"></script>
   <script src="js/zona/noche.js"></script>
   <script src="js/zona/dia.js"></script>
+
+  <!-- 21 Arcanos (blackjack): datos y motor antes que los flujos y main -->
+  <script src="data/blackjack/reglas.js"></script>
+  <script src="data/blackjack/tarot.js"></script>
+  <script src="js/blackjack/motor.js"></script>
+  <script src="js/blackjack/tarot.js"></script>
+  <script src="js/blackjack/clasico.js"></script>
+  <script src="js/blackjack/animaciones.js"></script>
+  <script src="js/blackjack/arcade.js"></script>
+  <script src="js/blackjack/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->
   <script src="js/nucleo/arranque.js"></script>

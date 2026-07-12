@@ -106,13 +106,23 @@ body {
 /* ==========================================================
    FIEsta (pantalla principal: elegir juego)
    ========================================================== */
+/* Con cinco juegos, la lista puede no caber de una vez en móviles pequeños.
+   Reducimos el gap del hub y, como red de seguridad, permitimos scroll con
+   "safe center": queda centrado cuando cabe y, si no, cae a flex-start para que
+   la primera tarjeta nunca se recorte por arriba (centrar + overflow la cortaría). */
+.pantalla[data-pantalla="fiesta"] {
+  gap: 0.6rem;
+  overflow-y: auto;
+  justify-content: safe center;
+}
+
 .fiesta-hero {
   line-height: 0;
 }
 
 .fiesta-hero-svg {
-  width: 128px;
-  height: 128px;
+  width: 104px;
+  height: 104px;
   filter: drop-shadow(0 8px 20px rgba(76, 125, 255, 0.35));
   animation: flotar-hero 4s ease-in-out infinite;
 }
@@ -123,7 +133,7 @@ body {
 }
 
 .fiesta-titulo {
-  font-size: 2.8rem !important;
+  font-size: 2.3rem !important;
   letter-spacing: 0.02em;
   background: linear-gradient(90deg, var(--color-acento), #a06bff);
   -webkit-background-clip: text;
@@ -142,10 +152,13 @@ body {
 .lista-juegos {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
   width: 100%;
   max-width: 26rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
+  /* No encoger dentro del flex del hub: con scroll activo, las tarjetas deben
+     conservar su altura en vez de comprimirse hasta quedar ilegibles. */
+  flex-shrink: 0;
 }
 
 /* Tarjeta-botón de cada juego. Es "relative" para anclar la ⓘ a su esquina;
@@ -157,7 +170,7 @@ body {
   align-items: flex-start;
   gap: 0.25rem;
   width: 100%;
-  padding: 1.1rem 2.8rem 1.1rem 1.3rem;
+  padding: 0.85rem 2.6rem 0.85rem 1.15rem;
   text-align: left;
   background: var(--color-superficie);
   color: var(--color-texto);
@@ -170,12 +183,12 @@ body {
 }
 
 .juego-card-nombre {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 
 .juego-card-desc {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 400;
   color: var(--color-texto-tenue);
 }
@@ -1288,4 +1301,664 @@ button.secundario:hover {
 }
 .rl-resultado-pop {
   animation: rl-pop 420ms var(--curva-transicion);
+}
+
+/* ==========================================================
+   21 Arcanos (blackjack)
+   ========================================================== */
+
+/* --- Pantalla de reglas: fila (nombre + descripción) + interruptor --- */
+.bj-regla {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+}
+.bj-regla.deshabilitada {
+  opacity: 0.55;
+}
+.bj-regla-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.bj-regla-nombre {
+  font-weight: 600;
+}
+.bj-regla-desc {
+  font-size: 0.8rem;
+  color: var(--color-texto-tenue);
+}
+.bj-ruleset-resumen {
+  font-size: 0.9rem;
+  color: var(--color-texto-tenue);
+  max-width: 26rem;
+}
+
+/* Interruptor iOS del blackjack (misma técnica que .zt-switch: checkbox real
+   oculto + pista deslizante que reacciona con CSS a :checked, cero JS visual). */
+.bj-switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.bj-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bj-switch-pista {
+  position: absolute;
+  inset: 0;
+  background: var(--color-fondo-alt);
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+.bj-switch-pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 150ms ease;
+}
+.bj-switch input:checked + .bj-switch-pista {
+  background: var(--color-acento);
+}
+.bj-switch input:checked + .bj-switch-pista::after {
+  transform: translateX(20px);
+}
+.bj-switch input:disabled + .bj-switch-pista {
+  opacity: 0.5;
+}
+.bj-switch input:focus-visible + .bj-switch-pista {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+}
+
+/* --- Mesa del Clásico --- */
+.bj-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 26rem;
+}
+.bj-dato {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.4rem 0.8rem;
+  font-weight: 700;
+}
+.bj-btn-stats {
+  min-height: 0;
+  padding: 0.4rem 0.7rem;
+  font-size: 1.1rem;
+}
+
+/* Mesa compartida del Arcade (Fase 9.2): barra horizontal scrolleable con el resto
+   de jugadores de la ronda. Cada uno muestra su nombre, su mano (apilada, dejando
+   ver ~30 % del lateral izquierdo de las cartas de debajo) y, si su turno ya pasó,
+   la apuesta revelada. Las cartas de quien aún no ha jugado van boca abajo. */
+.bj-mesa-jugadores {
+  display: flex;
+  gap: 0.7rem;
+  overflow-x: auto;
+  width: 100%;
+  max-width: 26rem;
+  padding: 0.15rem 0.1rem 0.35rem;
+  scrollbar-width: thin;
+}
+.bj-mesa-jug {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+.bj-mesa-jug-cab {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  max-width: 8rem;
+}
+.bj-mesa-jug-nombre {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-texto-tenue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bj-mesa-jug-total {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-texto);
+  flex: 0 0 auto;
+}
+.bj-mesa-jug-cartas {
+  display: flex;
+  min-height: 53px; /* alto de una carta a 38px de ancho: la barra no colapsa */
+}
+.bj-mesa-jug-cartas img {
+  width: 38px;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+/* Apilado: cada carta cubre el 70 % de la anterior (queda visible su 30 % izquierdo). */
+.bj-mesa-jug-cartas img:not(:first-child) {
+  margin-left: -27px;
+}
+.bj-mesa-jug-apuesta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-texto);
+}
+
+/* Zona de una mano: título con total + fila de cartas */
+.bj-zona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+.bj-zona-titulo {
+  font-weight: 600;
+  color: var(--color-texto-tenue);
+}
+.bj-total {
+  display: inline-block;
+  min-width: 1.6em;
+  font-weight: 700;
+  color: var(--color-texto);
+}
+.bj-cartas {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 88px; /* reserva el alto de una carta para que no salte el layout */
+}
+.bj-cartas img {
+  width: 62px;
+  height: auto;
+  image-rendering: pixelated; /* pixel art nítido, sin suavizado del navegador */
+  border-radius: 6px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  animation: bj-carta-entra 200ms ease;
+}
+@keyframes bj-carta-entra {
+  from { transform: translateY(-10px) scale(0.92); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Volteo (Fase 9.1): cada carta que se reparte/revela aparece primero como REVERSO
+   al lado de las demás y, tras una pausa, se voltea una sola vez para mostrar su
+   frente (el cambio de imagen lo hace el JS en el punto de canto). Mayor
+   especificidad que ".bj-cartas img", así que ganan sobre la entrada simple. */
+.bj-cartas img.bj-reverso-entra {
+  animation: bj-reverso-entra 240ms ease both;
+}
+@keyframes bj-reverso-entra {
+  from { transform: translateY(-10px) scale(0.92); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.bj-cartas img.bj-volteo-revela {
+  animation: bj-volteo-revela 520ms ease both;
+}
+@keyframes bj-volteo-revela {
+  0%   { transform: scaleX(1); }
+  50%  { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+/* Carta ya vista que se repinta al redibujar la mano: sin animación, para que no
+   vuelva a "entrar" (ni haga el saltito de la entrada base) en cada acción. */
+.bj-cartas img.bj-sin-entrada {
+  animation: none;
+}
+
+/* Mano(s) del jugador: una centrada, o dos lado a lado al dividir (split). */
+.bj-manos {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+  min-height: 88px; /* reserva el alto de una carta para que no salte al repartir */
+}
+.bj-mano {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+/* Cada mano dividida en su "cajita"; la activa, resaltada con el color de acento. */
+.bj-mano-multi {
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radio-borde-chico);
+  border: 2px solid transparent;
+}
+.bj-mano-multi.activa {
+  border-color: var(--color-acento);
+  background: rgba(76, 125, 255, 0.08);
+}
+.bj-mano-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bj-total-bust {
+  color: var(--color-fallo);
+}
+.bj-mano-apuesta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-texto-tenue);
+}
+.bj-mano-res {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.bj-mano-res.gana { color: var(--color-exito); }
+.bj-mano-res.pierde { color: var(--color-fallo); }
+.bj-mano-res.empate { color: var(--color-texto-tenue); }
+
+/* Banner de resultado + variación de fichas */
+.bj-resultado {
+  font-size: 1.3rem;
+  font-weight: 700;
+  min-height: 1.5rem;
+  text-align: center;
+}
+.bj-delta {
+  min-height: 1.3rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.bj-resultado.gana,
+.bj-delta.gana { color: var(--color-exito); }
+.bj-resultado.pierde,
+.bj-delta.pierde { color: var(--color-fallo); }
+.bj-resultado.empate { color: var(--color-texto-tenue); }
+.bj-delta.pop {
+  animation: rl-pop 420ms var(--curva-transicion); /* reutiliza el "pop" de La Ruleta */
+}
+
+/* Controles por fase */
+.bj-controles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 26rem;
+}
+/* Un display de autor (flex/grid) gana al [hidden] del navegador, así que hay que
+   devolverle la prioridad al estado oculto (mismo caso que .cf-efectos-overlay).
+   Sin esto, los bloques de control/config con el atributo hidden se verían igual. */
+.bj-controles[hidden],
+.bj-config-fila[hidden] {
+  display: none;
+}
+.bj-apuesta-fila {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+/* Acciones de la mesa (Pedir/Plantarse/Doblar/Dividir/Rendirse), en Clásico y
+   Arcade. Botones REDONDOS de una letra/símbolo, coloreados, en dos filas
+   escalonadas: 3 arriba (pedir/plantarse/doblar) y 2 abajo centradas (split/rendir).
+   El max-width fuerza 3 botones por fila; al envolver, el centrado deja la 2ª fila
+   nestlada entre los de arriba. Ocupan mucho menos alto y ancho que los botones
+   anchos previos, para que la mesa quepa sin scroll vertical.
+
+        ✓    ✗    D
+          S    R
+*/
+.bj-acciones {
+  display: flex;
+  flex-direction: row; /* .bj-controles fija column; aquí van en fila (si no, se apilan) */
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 0.55rem;
+  max-width: 10rem; /* ~3 botones de 44px + 2 gaps: el 4.º y 5.º caen a la 2ª fila */
+  margin-inline: auto;
+}
+.bj-acciones button {
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bj-acciones button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+/* Colores por acción (ganan al fondo base y al :hover por especificidad). */
+.bj-acciones .bj-accion-pedir { background: var(--color-exito); }
+.bj-acciones .bj-accion-plantarse { background: var(--color-fallo); }
+.bj-acciones .bj-accion-doblar { background: #2f6fed; }
+.bj-acciones .bj-accion-dividir { background: #8b5cf6; }
+.bj-acciones .bj-accion-rendirse { background: #23262e; }
+/* Deshabilitado: gris inerte (mayor especificidad que las clases de color). */
+.bj-acciones button:disabled {
+  background: var(--color-superficie);
+  color: var(--color-texto-tenue);
+  filter: none;
+}
+
+/* Overlays de la mesa (estadísticas / banca rota): mismo patrón que .info-overlay,
+   pero position:fixed para que cubran la pantalla aunque la mesa (con-scroll) esté
+   desplazada. La .pantalla activa tiene transform, que hace de bloque contenedor:
+   fixed queda anclado a su caja (inset:0 = pantalla completa). */
+.bj-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(6, 9, 18, 0.82);
+}
+.bj-overlay[hidden] {
+  display: none;
+}
+.bj-overlay-panel {
+  width: min(90vw, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: var(--color-fondo-alt);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-borde);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+.bj-overlay-panel h2 {
+  margin: 0;
+  text-align: center;
+}
+.bj-stats-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.bj-stats-fila span:last-child {
+  font-weight: 700;
+}
+
+/* --- Modo Arcade: configuración --- */
+.bj-config-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  max-width: 26rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.5rem 0.9rem;
+}
+.bj-config-etiqueta {
+  font-weight: 600;
+}
+/* El stepper es más compacto dentro de una fila de configuración. */
+.bj-config-fila .stepper {
+  gap: 0.6rem;
+}
+.bj-config-fila .stepper-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+}
+.bj-config-fila .stepper-valor {
+  font-size: 1.4rem;
+  min-width: 2.5ch;
+}
+/* La lista de nombres son solo 1–5 inputs cortos y la pantalla ya es .con-scroll,
+   así que aquí NO queremos el scroll propio con tope de .lista-scroll: entre el
+   stepper de jugadores y los controles de pila/rondas/fiesta dejaba la lista
+   aplastada en una cajita. La dejamos crecer con su contenido. */
+#bj-arcade-nombres {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* La nota (vacía siempre en multijugador) y el error (vacío hasta que falla la
+   validación) heredan `min-height: 1.2em` de .ayuda/.error, reservando un hueco
+   muerto entre la config y «Empezar». Vacíos, que no ocupen NADA (ni su gap): así
+   se quita ese espacio reservado y el botón deja de quedar empujado/solapado. */
+#bj-arcade-nota:empty,
+#bj-arcade-error:empty {
+  display: none;
+}
+
+/* --- Modo Arcade: filas de resolución de ronda y de fin --- */
+.bj-ronda-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.5rem 0.9rem;
+  text-align: left;
+}
+.bj-ronda-fila-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.bj-ronda-fila-der {
+  align-items: flex-end;
+}
+.bj-ronda-nombre {
+  font-weight: 700;
+}
+.bj-ronda-detalle {
+  font-size: 0.8rem;
+  color: var(--color-texto-tenue);
+}
+.bj-ronda-delta {
+  font-weight: 700;
+}
+.bj-ronda-delta.gana {
+  color: var(--color-exito);
+}
+.bj-ronda-delta.pierde {
+  color: var(--color-fallo);
+}
+.bj-ronda-delta.empate {
+  color: var(--color-texto-tenue);
+}
+/* Pila en negativo (deuda): resaltada en rojo. */
+.bj-pila-neg {
+  color: var(--color-fallo);
+}
+
+/* --- Modo fiesta 🍻 (Fase 8): capa de tragos en la resolución de ronda --- */
+/* Un display de autor (flex) gana al [hidden] del navegador (mismo caso que
+   .bj-controles[hidden]): sin esto la capa de tragos se vería aunque el modo
+   fiesta esté apagado y bjArcadeRenderFiesta le ponga hidden. */
+.bj-fiesta[hidden] {
+  display: none;
+}
+.bj-fiesta {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-borde);
+  text-align: left;
+  animation: bj-fiesta-in 0.35s ease;
+}
+@keyframes bj-fiesta-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.bj-fiesta-titulo {
+  font-weight: 700;
+  text-align: center;
+}
+.bj-fiesta-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.bj-fiesta-item {
+  padding: 0.4rem 0.6rem;
+  background: var(--color-fondo-alt);
+  border-radius: var(--radio-borde-chico);
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+/* Recordatorio de un arcano [F]: se distingue de las reglas base con un filete. */
+.bj-fiesta-arcano {
+  border-left: 3px solid var(--color-acento);
+  color: var(--color-texto-tenue);
+}
+.bj-fiesta-vacio {
+  text-align: center;
+  font-style: italic;
+  color: var(--color-texto-tenue);
+}
+
+/* --- Tarot: la tirada del destino (pantalla bj-tarot) --- */
+.bj-tarot-cartas {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+.bj-tarot-carta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  /* Estado inicial: boca abajo (invisible y girada); .revelada la voltea. */
+  opacity: 0;
+  transform: rotateY(90deg) translateY(8px);
+  transition: opacity 450ms var(--curva-transicion), transform 450ms var(--curva-transicion);
+}
+.bj-tarot-carta.revelada {
+  opacity: 1;
+  transform: none;
+}
+.bj-tarot-carta img {
+  width: min(26vw, 108px);
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+.bj-tarot-posicion {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-texto-tenue);
+}
+.bj-tarot-nombre {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Textos de los efectos bajo las cartas (y dentro del panel de la mesa). */
+.bj-tarot-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 26rem;
+}
+.bj-tarot-efecto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.5rem 0.8rem;
+  text-align: left;
+}
+.bj-tarot-efecto-nombre {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.bj-tarot-efecto-texto {
+  font-size: 0.85rem;
+  color: var(--color-texto-tenue);
+}
+.bj-tarot-manual {
+  font-size: 0.75rem;
+  color: #d4af37; /* dorado del juego: marca las reglas que se aplican de palabra */
+}
+.bj-tarot-fiesta {
+  font-size: 0.8rem;
+  color: var(--color-acento);
+}
+
+/* Chip 🔮 que abre las reglas de mesa (esquina superior derecha, fuera del flujo,
+   mismo patrón que .cf-chip-efectos). */
+.bj-tarot-chip {
+  position: absolute;
+  top: calc(0.75rem + env(safe-area-inset-top));
+  right: calc(0.75rem + env(safe-area-inset-right));
+  z-index: 15;
+  min-height: 0;
+  padding: 0.45rem 0.7rem;
+  font-size: 1.1rem;
+}
+/* Cada arcano dentro del panel: miniatura + su ficha de efecto. */
+.bj-tarot-panel-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.bj-tarot-panel-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.bj-tarot-panel-item img {
+  width: 48px;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.bj-tarot-panel-item .bj-tarot-efecto {
+  flex: 1;
+  padding: 0;
+  background: none;
 }

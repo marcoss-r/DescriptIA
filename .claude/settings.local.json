@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python -m py_compile data/agregar_tarjeta.py)",
-      "PowerShell(python \"img/cartas/generar_tarot.py\")"
+      "PowerShell(python \"img/cartas/generar_tarot.py\")",
+      "PowerShell(python \"img\\\\21arc\\\\generar_tarot_bj.py\")"
     ]
   }
 }
