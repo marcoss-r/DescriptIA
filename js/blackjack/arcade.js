@@ -207,6 +207,8 @@ function bjArcadeEmpezar() {
     multFijo: 1,          // El Juicio invertido: multiplicador que ya no se va
     ganoACiegas: false,   // La Luna (Pasado): ganaste sin ver la oculta del dealer
     dobloYGano: false,    // El Diablo (Pasado): doblaste y ganaste la ronda anterior
+    empatoPrevio: false,  // La Justicia (Pasado): empataste la ronda anterior
+    empates: 0,           // La Justicia (Futuro): empates acumulados en la partida
   }));
 
   // Banderas de mesa que encienden los arcanos de Pasado a mitad de partida.
@@ -791,6 +793,11 @@ function bjArcadeMultJugador(indice) {
   // que se le sorteó al cobrarla (bjArcadeAjustesDeRonda lo guarda en multRueda).
   if (bjTarotAplica("rueda-pa-n")) mult *= jugador.multRueda;
 
+  // La Justicia (Pasado): venir de un empate retoca las ganancias de esta ronda,
+  // ×1,1 (normal) o ×0,9 (invertida).
+  if (bjTarotAplica("justicia-pa-n") && jugador.empatoPrevio) mult *= 1.1;
+  if (bjTarotAplica("justicia-pa-i") && jugador.empatoPrevio) mult *= 0.9;
+
   // El Juicio invertido: los multiplicadores no se van. En Presente quedan fijos toda
   // la partida; en Pasado se arrastran de una ronda a la siguiente. En ambos casos el
   // jugador conserva el mejor multiplicador que haya tenido (el `multFijo` lo guarda
@@ -921,11 +928,16 @@ function bjArcadeAjustesDeRonda() {
     }
 
     // --- Rastro para la ronda siguiente ---
+    const empato = ronda.manos.some((mano) => mano.resultado === "empate");
     jugador.ganoPrevio = gano;
     jugador.bustPrevio = sePaso;
     jugador.perdidasSeguidas = perdio ? jugador.perdidasSeguidas + 1 : 0;
     jugador.dobloYGano = gano && doblo;
     jugador.ganoACiegas = gano && !c.ocultaEraVisible;
+    // La Justicia: Pasado mira si vienes de empatar; Futuro cuenta los empates de
+    // toda la partida para el ajuste final (bjArcadeJusticiaFinal).
+    jugador.empatoPrevio = empato;
+    if (empato) jugador.empates++;
     if (natural) jugador.blackjacksPrevios++;
     // La Rueda normal (Pasado): tras ganar se sortea el ×1–×3 de tu PRÓXIMA ganancia.
     if (bjTarotAplica("rueda-pa-n")) jugador.multRueda = gano ? 1 + Math.floor(Math.random() * 3) : 1;
@@ -1014,12 +1026,34 @@ function bjArcadeRondaSiguiente() {
 // ============================================================
 
 function bjArcadeFin() {
+  bjArcadeJusticiaFinal();
   if (bjArcade.jugadores.length === 1) {
     bjArcadeFinSolitario();
   } else {
     bjArcadeFinRanking();
   }
   mostrarPantalla("bj-fin");
+}
+
+// La Justicia (Futuro): al acabar la partida, quien más empates acumule cobra ×1,2
+// sobre toda su pila (normal) o pierde 15 fichas (invertida). Si nadie ha empatado
+// no dispara; con empate a empates, lo reciben todos los que compartan el máximo.
+// Se usa bjTarotTiene (no bjTarotAplica): es un ajuste «al final de la partida»,
+// también si el zapato la corta antes de la última ronda prevista.
+function bjArcadeJusticiaFinal() {
+  const normal = bjTarotTiene("justicia-fu-n");
+  const invertida = bjTarotTiene("justicia-fu-i");
+  if (!normal && !invertida) return;
+
+  const max = Math.max.apply(null, bjArcade.jugadores.map((j) => j.empates));
+  if (max === 0) return;
+
+  bjArcade.jugadores.forEach((jugador) => {
+    if (jugador.empates !== max) return;
+    // La bonificación solo multiplica pilas positivas: agrandar una deuda no premia.
+    if (normal && jugador.pila > 0) jugador.pila = Math.round(jugador.pila * 1.2);
+    if (invertida) jugador.pila -= 15;
+  });
 }
 
 // Multijugador: ranking por pila final (gana la más grande), con medallas y empates.

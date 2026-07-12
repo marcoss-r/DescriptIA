@@ -112,9 +112,9 @@ function bjTarotAplica(clave) {
 // ============================================================
 
 // Opciones que se pasan a bjJugarDealer/bjResolverMano según los arcanos activos.
-// Reúne los efectos que el motor ya sabe aplicar: límite del dealer (Torre), pago
-// del blackjack natural (Emperatriz, Mundo invertido) y a quién van los empates
-// (Justicia). Cada uno en sus posiciones Presente y Futuro.
+// Reúne los efectos que el motor ya sabe aplicar: límite del dealer (Torre, en
+// Presente y Futuro), pago del blackjack natural (Emperatriz, Mundo invertido) y
+// a quién van los empates (Justicia, solo en Presente).
 function bjTarotOpcionesMotor() {
   const opciones = {};
 
@@ -129,9 +129,11 @@ function bjTarotOpcionesMotor() {
   if (bjTarotAplica("emperatriz-fu-n")) opciones.pagoNatural = 3;
   if (bjTarotAplica("mundo-pr-i")) opciones.pagoNatural = 1;
 
-  // La Justicia decide los empates a favor del jugador o del dealer.
-  if (bjTarotAplica("justicia-pr-n") || bjTarotAplica("justicia-fu-n")) opciones.empate = "jugador";
-  if (bjTarotAplica("justicia-pr-i") || bjTarotAplica("justicia-fu-i")) opciones.empate = "dealer";
+  // La Justicia (Presente) decide los empates a favor del jugador o del dealer.
+  // Sus posiciones Pasado (multiplicador tras empatar) y Futuro (ajuste de fin de
+  // partida por empates acumulados) se aplican en arcade.js, no aquí.
+  if (bjTarotAplica("justicia-pr-n")) opciones.empate = "jugador";
+  if (bjTarotAplica("justicia-pr-i")) opciones.empate = "dealer";
 
   return opciones;
 }

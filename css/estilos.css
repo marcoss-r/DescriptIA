@@ -1538,6 +1538,12 @@ button.secundario:hover {
   from { transform: translateY(-10px) scale(0.92); opacity: 0; }
   to   { transform: none; opacity: 1; }
 }
+/* En las pantallas de apuesta y de pasar el móvil del Arcade apenas hay
+   controles, así que la carta del dealer se muestra más grande. */
+#bj-apuesta-dealer img,
+#bj-pasar-dealer img {
+  width: 88px;
+}
 
 /* Volteo (Fase 9.1): cada carta que se reparte/revela aparece primero como REVERSO
    al lado de las demás y, tras una pausa, se voltea una sola vez para mostrar su

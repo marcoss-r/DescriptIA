@@ -652,7 +652,7 @@ que identifica de quién es el turno activo en cada momento.
        La Sacerdotisa (espiar el mazo), El Juicio (2.ª oportunidad tras pasarse),
        El Diablo (tentar al diablo con 3 cartas), El Carro (apostar por el líder),
        La Muerte (22 → 12), El Mago Futuro (doblar obligatorio), El Hierofante Futuro
-       (ruleset solo en la última ronda), La Justicia de Pasado (karma de empates).
+       (ruleset solo en la última ronda).
     3. **Fin de partida**: El Mundo (Futuro), que suma/resta 15 por cada 21 o blackjack.
     4. **Saldo de tragos del tarot**: que la línea `fiesta` de cada arcano se sume al
        recuento del final de ronda solo cuando el efecto ha disparado de verdad.
