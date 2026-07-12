@@ -656,7 +656,21 @@ que identifica de quién es el turno activo en cada momento.
     3. **Fin de partida**: El Mundo (Futuro), que suma/resta 15 por cada 21 o blackjack.
     4. **Saldo de tragos del tarot**: que la línea `fiesta` de cada arcano se sume al
        recuento del final de ronda solo cuando el efecto ha disparado de verdad.
-  - Versiones subidas: `APP_VERSION` y `CACHE` → **4.9.9**.
+  - ✅ **Paso 6 — Solitario: pool filtrado**. Los efectos que dependen del RANKING de
+    jugadores no pueden disparar con un solo jugador (los helpers `bjArcadeEsLider` /
+    `bjArcadeEsUltimo` / `bjArcadeLideraVictorias` / `bjArcadePuestoInicio` devuelven
+    `false` con `jugadores.length <= 1`, y `bjArcadeTrasvasesDiablo` sale de vacío).
+    Para no **malgastar una carta de la tirada** en un efecto inerte, esos efectos van
+    marcados `soloMulti: true` en los datos y `bjTarotTirada` los excluye del pool en
+    solitario (`bjTarotOrientacionesVivas`): por posición solo se considera un arcano
+    si le queda alguna orientación viva, y la orientación se sortea entre las vivas.
+    Son 12: **El Emperador** entero (las 6 → el arcano no sale nunca en solitario),
+    **El Diablo** invertido (las 3, trasvases de fichas), **El Ermitaño** de Pasado
+    (las 2, ir último/primero) y **El Carro** en `pr-n` (apostar por el líder) y `fu-i`
+    (quien más victorias lleve). Ojo: **sí** siguen valiendo en solitario los que
+    parecen de ranking pero miran al dealer (El Sol y La Torre de Pasado: «el dealer
+    gana a todos» con un jugador es «el dealer te gana»).
+  - Versiones subidas: `APP_VERSION` y `CACHE` → **4.9.10**.
 
 
 

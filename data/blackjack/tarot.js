@@ -21,6 +21,9 @@
 //     - fiesta: consecuencia de tragos cuando el efecto TE TOCA en una ronda. Solo
 //       se usa con el modo fiesta 🍻: se suma al saldo de tragos del final de la
 //       ronda (arcade.js), aparte de los tragos base (deuda, perder, blackjack…).
+//     - soloMulti: el efecto depende del RANKING de jugadores (líder, último, robar
+//       fichas a los demás), así que en solitario no haría nada. La tirada lo excluye
+//       del pool cuando se juega solo (bjTarotTirada), para no malgastar una carta.
 //
 // TODOS los efectos se aplican por código (no hay reglas «de palabra»): plan §9.3.
 
@@ -97,16 +100,16 @@ const BJ_TAROT = [
     numeral: "IV", nombre: "El Emperador", slug: "emperador",
     posiciones: {
       pasado: {
-        normal: { efecto: "emperador-pa-n", texto: "Al final de cada ronda, el líder gana +2 fichas por cada ronda que lleve en cabeza.", fiesta: "El líder reparte 1 trago cada ronda." },
-        invertida: { efecto: "emperador-pa-i", texto: "Si el último del ranking gana la ronda siguiente, cobra ×2.", fiesta: "Si el último gana, reparte 2 tragos." },
+        normal: { efecto: "emperador-pa-n", soloMulti: true, texto: "Al final de cada ronda, el líder gana +2 fichas por cada ronda que lleve en cabeza.", fiesta: "El líder reparte 1 trago cada ronda." },
+        invertida: { efecto: "emperador-pa-i", soloMulti: true, texto: "Si el último del ranking gana la ronda siguiente, cobra ×2.", fiesta: "Si el último gana, reparte 2 tragos." },
       },
       presente: {
-        normal: { efecto: "emperador-pr-n", texto: "Quien vaya líder no puede rendirse, toda la partida.", fiesta: "Si el líder quiere rendirse, bebe 1 trago." },
-        invertida: { efecto: "emperador-pr-i", texto: "El último del ranking siempre puede doblar, aunque no esté permitido.", fiesta: "Cuando el último doble, bebe 1 trago." },
+        normal: { efecto: "emperador-pr-n", soloMulti: true, texto: "Quien vaya líder no puede rendirse, toda la partida.", fiesta: "Si el líder quiere rendirse, bebe 1 trago." },
+        invertida: { efecto: "emperador-pr-i", soloMulti: true, texto: "El último del ranking siempre puede doblar, aunque no esté permitido.", fiesta: "Cuando el último doble, bebe 1 trago." },
       },
       futuro: {
-        normal: { efecto: "emperador-fu-n", texto: "En la última ronda, si el líder gana, cobra ×2.", fiesta: "Si el líder gana, reparte 2 tragos." },
-        invertida: { efecto: "emperador-fu-i", texto: "En la última ronda, si el último del ranking gana, cobra ×2.", fiesta: "Si el último gana, reparte 2 tragos." },
+        normal: { efecto: "emperador-fu-n", soloMulti: true, texto: "En la última ronda, si el líder gana, cobra ×2.", fiesta: "Si el líder gana, reparte 2 tragos." },
+        invertida: { efecto: "emperador-fu-i", soloMulti: true, texto: "En la última ronda, si el último del ranking gana, cobra ×2.", fiesta: "Si el último gana, reparte 2 tragos." },
       },
     },
   },
@@ -152,12 +155,12 @@ const BJ_TAROT = [
         invertida: { efecto: "carro-pa-i", texto: "Tras ganar una ronda, la siguiente apuesta debe ser al menos el doble de la mínima.", fiesta: "Quien suba su apuesta, bebe 1 trago." },
       },
       presente: {
-        normal: { efecto: "carro-pr-n", texto: "En tu turno puedes apostar por el líder actual: si su mano gana la ronda, cobras +3 fichas aunque la tuya pierda.", fiesta: "Quien cobre apostando por el líder reparte 1 trago." },
+        normal: { efecto: "carro-pr-n", soloMulti: true, texto: "En tu turno puedes apostar por el líder actual: si su mano gana la ronda, cobras +3 fichas aunque la tuya pierda.", fiesta: "Quien cobre apostando por el líder reparte 1 trago." },
         invertida: { efecto: "carro-pr-i", texto: "La apuesta mínima sube +5 cada vez que alguien encadena 2 victorias.", fiesta: "Cuando suba la mínima, todos beben 1 trago." },
       },
       futuro: {
         normal: { efecto: "carro-fu-n", texto: "Quien llegue en racha de victorias a la última ronda cobra ×2.", fiesta: "Quien llegue en racha reparte 2 tragos." },
-        invertida: { efecto: "carro-fu-i", texto: "En la última ronda, quien más victorias lleve debe apostar el doble de la apuesta máxima.", fiesta: "Quien deba apostar el doble brinda con todos." },
+        invertida: { efecto: "carro-fu-i", soloMulti: true, texto: "En la última ronda, quien más victorias lleve debe apostar el doble de la apuesta máxima.", fiesta: "Quien deba apostar el doble brinda con todos." },
       },
     },
   },
@@ -182,8 +185,8 @@ const BJ_TAROT = [
     numeral: "IX", nombre: "El Ermitaño", slug: "ermitano",
     posiciones: {
       pasado: {
-        normal: { efecto: "ermitano-pa-n", texto: "En cada ronda, quien vaya último ve la carta oculta del dealer.", fiesta: "Quien espíe la oculta, bebe 1 trago." },
-        invertida: { efecto: "ermitano-pa-i", texto: "En cada ronda, quien vaya primero no ve la carta visible del dealer hasta plantarse.", fiesta: "Quien juegue a ciegas, bebe 1 trago." },
+        normal: { efecto: "ermitano-pa-n", soloMulti: true, texto: "En cada ronda, quien vaya último ve la carta oculta del dealer.", fiesta: "Quien espíe la oculta, bebe 1 trago." },
+        invertida: { efecto: "ermitano-pa-i", soloMulti: true, texto: "En cada ronda, quien vaya primero no ve la carta visible del dealer hasta plantarse.", fiesta: "Quien juegue a ciegas, bebe 1 trago." },
       },
       presente: {
         normal: { efecto: "ermitano-pr-n", texto: "La carta oculta del dealer está visible toda la partida.", fiesta: "Quien mire la oculta, bebe 1 trago." },
@@ -285,15 +288,15 @@ const BJ_TAROT = [
     posiciones: {
       pasado: {
         normal: { efecto: "diablo-pa-n", texto: "Tras doblar y ganar, el jugador cobra ×2 extra al doblar en su ronda siguiente.", fiesta: "Quien tiente al diablo reparte 1 trago." },
-        invertida: { efecto: "diablo-pa-i", texto: "Cada mano perdida entrega 2 fichas a cada ganador de la ronda, dealer incluido.", fiesta: "Los perdedores, además, beben 1 trago." },
+        invertida: { efecto: "diablo-pa-i", soloMulti: true, texto: "Cada mano perdida entrega 2 fichas a cada ganador de la ronda, dealer incluido.", fiesta: "Los perdedores, además, beben 1 trago." },
       },
       presente: {
         normal: { efecto: "diablo-pr-n", texto: "Una vez por partida, con 3 cartas en mano puedes pedir una más y, si no te pasas, cobrar ×2.", fiesta: "Quien tiente al diablo reparte 2 tragos." },
-        invertida: { efecto: "diablo-pr-i", texto: "Cada ronda, los ganadores roban 3 fichas a cada perdedor.", fiesta: "Cada perdedor bebe 1 trago." },
+        invertida: { efecto: "diablo-pr-i", soloMulti: true, texto: "Cada ronda, los ganadores roban 3 fichas a cada perdedor.", fiesta: "Cada perdedor bebe 1 trago." },
       },
       futuro: {
         normal: { efecto: "diablo-fu-n", texto: "En la última ronda, doblar cobra ×2 extra.", fiesta: "Quien doble en la última reparte 1 trago." },
-        invertida: { efecto: "diablo-fu-i", texto: "Quien gane la última ronda roba 5 fichas a cada perdedor.", fiesta: "Cada perdedor bebe 2 tragos." },
+        invertida: { efecto: "diablo-fu-i", soloMulti: true, texto: "Quien gane la última ronda roba 5 fichas a cada perdedor.", fiesta: "Cada perdedor bebe 2 tragos." },
       },
     },
   },

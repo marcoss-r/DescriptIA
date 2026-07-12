@@ -29,27 +29,53 @@ const BJ_TAROT_POSICIONES = [
 //  La tirada
 // ============================================================
 
+// Orientaciones JUGABLES de un arcano en una posición. Normalmente son las dos
+// (normal e invertida), pero en solitario se descartan las marcadas `soloMulti`:
+// dependen del ranking de jugadores (líder, último, robar fichas a los demás) y no
+// harían nada jugando solo. Devuelve [] si en esa posición no queda ninguna viva.
+function bjTarotOrientacionesVivas(carta, posClave, solitario) {
+  const par = carta.posiciones[posClave];
+  const vivas = [];
+  if (!solitario || !par.normal.soloMulti) vivas.push({ invertida: false, datos: par.normal });
+  if (!solitario || !par.invertida.soloMulti) vivas.push({ invertida: true, datos: par.invertida });
+  return vivas;
+}
+
 // Saca 3 arcanos distintos del pool y los coloca en Pasado, Presente y Futuro. Cada
 // uno toma el efecto de SU posición (plan §9.4), normal o invertido al 50 %, y se
 // deja en bjEstado.tarot con la clave de efecto que consultan los hooks.
+//
+// En SOLITARIO la tirada esquiva los efectos que dependen del ranking: para cada
+// posición solo se considera un arcano si le queda alguna orientación viva ahí, y la
+// orientación se sortea entre las vivas. Así no se malgasta una carta de la tirada en
+// un efecto que no puede disparar (El Emperador entero, el Diablo invertido, el
+// Ermitaño de Pasado y el Carro en Presente normal / Futuro invertido).
 function bjTarotTirada() {
-  const cartas = barajar(BJ_TAROT).slice(0, 3);
-  bjEstado.tarot = cartas.map((carta, i) => {
-    const posicion = BJ_TAROT_POSICIONES[i];
-    const invertida = Math.random() < 0.5;
-    const datos = invertida
-      ? carta.posiciones[posicion.clave].invertida
-      : carta.posiciones[posicion.clave].normal;
+  const solitario = bjArcade.jugadores.length === 1;
+  const pool = barajar(BJ_TAROT);
+  const usados = [];
+
+  bjEstado.tarot = BJ_TAROT_POSICIONES.map((posicion) => {
+    const carta = pool.find(
+      (candidata) =>
+        usados.indexOf(candidata) === -1 &&
+        bjTarotOrientacionesVivas(candidata, posicion.clave, solitario).length > 0
+    );
+    usados.push(carta);
+
+    const vivas = bjTarotOrientacionesVivas(carta, posicion.clave, solitario);
+    const elegida = vivas[Math.floor(Math.random() * vivas.length)];
+
     return {
       slug: carta.slug,
       numeral: carta.numeral,
       nombre: carta.nombre,
-      invertida,
+      invertida: elegida.invertida,
       posicion: posicion.etiqueta,
       posClave: posicion.clave,
-      efecto: datos.efecto,
-      texto: datos.texto,
-      fiesta: datos.fiesta || null,
+      efecto: elegida.datos.efecto,
+      texto: elegida.datos.texto,
+      fiesta: elegida.datos.fiesta || null,
     };
   });
 }
