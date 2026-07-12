@@ -2,7 +2,7 @@
 // se pueda instalar y funcione sin conexión. Para publicar una actualización,
 // sube el número de versión (CACHE) y se refrescará en el siguiente arranque.
 // CACHE y APP_VERSION (js/nucleo/arranque.js) van unificados desde v4.9.0.
-const CACHE = "fiesta-v4.9.8";
+const CACHE = "fiesta-v4.9.9";
 
 const ARCHIVOS = [
   "./",

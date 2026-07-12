@@ -1401,6 +1401,26 @@ button.secundario:hover {
   padding: 0.4rem 0.8rem;
   font-weight: 700;
 }
+/* Multiplicador de ganancias del jugador de turno. Vive dentro de la cabecera que ya
+   existe (no añade alto a la mesa). En ×1 pasa desapercibido; cuando un arcano lo
+   toca, se enciende en dorado. */
+.bj-dato-mult {
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.bj-dato-mult.activo {
+  background: var(--color-tarot-dorado, #d4af37);
+  color: #1a1408;
+}
+/* El mismo dato, en pequeño, para cada rival de la barra de la mesa compartida. */
+.bj-mesa-jug-mult {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radio-borde-chico);
+  background: var(--color-tarot-dorado, #d4af37);
+  color: #1a1408;
+}
 .bj-btn-stats {
   min-height: 0;
   padding: 0.4rem 0.7rem;

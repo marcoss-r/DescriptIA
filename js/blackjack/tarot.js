@@ -1,8 +1,9 @@
 // 21 Arcanos — tarot: la tirada del destino y los hooks sobre el motor.
 //
-// Al empezar una partida de Arcade se sacan 3 arcanos al azar (cada uno normal o
-// invertido al 50 %), se revelan como Pasado — Presente — Futuro en la pantalla
-// `bj-tarot` y quedan toda la partida como REGLAS DE MESA globales (plan §6).
+// Al empezar una partida de Arcade se sacan 3 arcanos al azar y se colocan como
+// Pasado — Presente — Futuro. La POSICIÓN condiciona el efecto: cada arcano tiene
+// un efecto distinto por posición (plan §9.4), y cada uno normal o invertido al
+// 50 %. Quedan toda la partida como REGLAS DE MESA globales (plan §6).
 //
 // Este archivo contiene:
 //   - La tirada (bjTarotTirada) y su revelado animado (bjTarotMostrar).
@@ -12,35 +13,42 @@
 //     Hierofante pisa el ruleset elegido).
 //   - El panel «Reglas de mesa» desplegable en la mesa del Arcade.
 //
-// Los efectos con `implementado: false` en los datos son reglas manuales: la app
-// solo las muestra (aquí y en el panel) y los jugadores las aplican de palabra.
+// TODOS los efectos se aplican por código (plan §9.3): no hay reglas «de palabra».
 
 // Ritmo del revelado: una carta cada tanto, y el texto al terminar.
 const BJ_TAROT_RITMO = 650; // ms entre carta y carta
 
-const BJ_TAROT_POSICIONES = ["Pasado", "Presente", "Futuro"];
+// Posición de cada slot de la tirada: etiqueta visible + clave en los datos.
+const BJ_TAROT_POSICIONES = [
+  { etiqueta: "Pasado", clave: "pasado" },
+  { etiqueta: "Presente", clave: "presente" },
+  { etiqueta: "Futuro", clave: "futuro" },
+];
 
 // ============================================================
 //  La tirada
 // ============================================================
 
-// Saca 3 arcanos distintos del pool, cada uno normal o invertido (50 %), y los
-// deja en bjEstado.tarot con su posición temática (por ahora no condiciona el
-// efecto, pero el dato se guarda por si en el futuro lo hace, plan §6).
+// Saca 3 arcanos distintos del pool y los coloca en Pasado, Presente y Futuro. Cada
+// uno toma el efecto de SU posición (plan §9.4), normal o invertido al 50 %, y se
+// deja en bjEstado.tarot con la clave de efecto que consultan los hooks.
 function bjTarotTirada() {
   const cartas = barajar(BJ_TAROT).slice(0, 3);
   bjEstado.tarot = cartas.map((carta, i) => {
+    const posicion = BJ_TAROT_POSICIONES[i];
     const invertida = Math.random() < 0.5;
-    const datos = invertida ? carta.invertida : carta.normal;
+    const datos = invertida
+      ? carta.posiciones[posicion.clave].invertida
+      : carta.posiciones[posicion.clave].normal;
     return {
       slug: carta.slug,
       numeral: carta.numeral,
       nombre: carta.nombre,
       invertida,
-      posicion: BJ_TAROT_POSICIONES[i],
+      posicion: posicion.etiqueta,
+      posClave: posicion.clave,
       efecto: datos.efecto,
       texto: datos.texto,
-      implementado: datos.implementado,
       fiesta: datos.fiesta || null,
     };
   });
@@ -51,10 +59,26 @@ function bjTarotImagen(entrada) {
   return `img/21arc/tarot-bj-${entrada.slug}${entrada.invertida ? "-invertida" : ""}.png`;
 }
 
-// ¿Está activa esta clave de efecto en la partida actual? Solo cuenta si además
-// está implementada (las manuales nunca activan código).
+// ¿Está esta clave de efecto en la tirada de la partida actual?
 function bjTarotTiene(clave) {
-  return bjEstado.tarot.some((e) => e.efecto === clave && e.implementado);
+  return bjEstado.tarot.some((e) => e.efecto === clave);
+}
+
+// ¿Es la última ronda del Arcade? Las profecías (efectos de posición Futuro) solo
+// se aplican en ella.
+function bjTarotEsUltimaRonda() {
+  return bjArcade.ronda >= bjArcade.rondasTotal;
+}
+
+// ¿Se APLICA este efecto ahora? Igual que bjTarotTiene, pero los efectos de Futuro
+// (clave "…-fu-…") solo cuentan en la última ronda. Los de Presente valen toda la
+// partida y los de Pasado siempre están activos (su lógica es un rastro entre
+// rondas). Es el helper que deben usar los hooks salvo que necesiten el matiz de
+// posición por su cuenta.
+function bjTarotAplica(clave) {
+  if (!bjTarotTiene(clave)) return false;
+  if (clave.indexOf("-fu-") !== -1) return bjTarotEsUltimaRonda();
+  return true;
 }
 
 // ============================================================
@@ -62,22 +86,38 @@ function bjTarotTiene(clave) {
 // ============================================================
 
 // Opciones que se pasan a bjJugarDealer/bjResolverMano según los arcanos activos.
+// Reúne los efectos que el motor ya sabe aplicar: límite del dealer (Torre), pago
+// del blackjack natural (Emperatriz, Mundo invertido) y a quién van los empates
+// (Justicia). Cada uno en sus posiciones Presente y Futuro.
 function bjTarotOpcionesMotor() {
   const opciones = {};
-  if (bjTarotTiene("torre-n")) opciones.limiteDealer = 16;
-  if (bjTarotTiene("torre-i")) opciones.limiteDealer = 18;
-  if (bjTarotTiene("emperatriz-n")) opciones.pagoNatural = 2;
-  if (bjTarotTiene("mundo-i")) opciones.pagoNatural = 1;
-  if (bjTarotTiene("justicia-n")) opciones.empate = "jugador";
-  if (bjTarotTiene("justicia-i")) opciones.empate = "dealer";
+
+  // La Torre: se planta antes (16) o roba más (18). Presente = toda la partida;
+  // Futuro = solo la última ronda (bjTarotAplica ya lo filtra).
+  if (bjTarotAplica("torre-pr-n") || bjTarotAplica("torre-fu-n")) opciones.limiteDealer = 16;
+  if (bjTarotAplica("torre-pr-i") || bjTarotAplica("torre-fu-i")) opciones.limiteDealer = 18;
+
+  // La Emperatriz sube el pago del natural (×2 toda la partida, ×3 en la última);
+  // el Mundo invertido lo baja a ×1.
+  if (bjTarotAplica("emperatriz-pr-n")) opciones.pagoNatural = 2;
+  if (bjTarotAplica("emperatriz-fu-n")) opciones.pagoNatural = 3;
+  if (bjTarotAplica("mundo-pr-i")) opciones.pagoNatural = 1;
+
+  // La Justicia decide los empates a favor del jugador o del dealer.
+  if (bjTarotAplica("justicia-pr-n") || bjTarotAplica("justicia-fu-n")) opciones.empate = "jugador";
+  if (bjTarotAplica("justicia-pr-i") || bjTarotAplica("justicia-fu-i")) opciones.empate = "dealer";
+
   return opciones;
 }
 
 // Ruleset efectivo de la partida: el elegido por el usuario, salvo que el
-// Hierofante mande (normal: todas las opcionales fuera; invertida: todas dentro).
+// Hierofante PRESENTE mande (normal: todas las opcionales fuera; invertida: todas
+// dentro). Se congela al empezar la partida (bjArcadeEmpezar); el Hierofante Futuro
+// —que solo actúa en la última ronda— se resuelve aparte en las comprobaciones de
+// acción, no aquí.
 function bjTarotRulesetEfectivo(base) {
-  if (bjTarotTiene("hierofante-n") || bjTarotTiene("hierofante-i")) {
-    const valor = bjTarotTiene("hierofante-i"); // true = todas ON, false = todas OFF
+  if (bjTarotTiene("hierofante-pr-n") || bjTarotTiene("hierofante-pr-i")) {
+    const valor = bjTarotTiene("hierofante-pr-i"); // true = todas ON, false = todas OFF
     const ruleset = {};
     BJ_REGLAS.forEach((regla) => {
       ruleset[regla.clave] = regla.disponible ? valor : regla.pordefecto;
@@ -148,20 +188,14 @@ function bjTarotCrearFilaEfecto(entrada) {
 
   const titulo = document.createElement("span");
   titulo.className = "bj-tarot-efecto-nombre";
-  titulo.textContent = entrada.nombre + (entrada.invertida ? " (invertida)" : "");
+  titulo.textContent =
+    entrada.nombre + " · " + entrada.posicion + (entrada.invertida ? " (invertida)" : "");
   fila.appendChild(titulo);
 
   const texto = document.createElement("span");
   texto.className = "bj-tarot-efecto-texto";
   texto.textContent = entrada.texto;
   fila.appendChild(texto);
-
-  if (!entrada.implementado) {
-    const manual = document.createElement("span");
-    manual.className = "bj-tarot-manual";
-    manual.textContent = "📜 Regla manual: la aplicáis vosotros.";
-    fila.appendChild(manual);
-  }
 
   if (entrada.fiesta && bjArcade.config.fiesta) {
     const fiesta = document.createElement("span");

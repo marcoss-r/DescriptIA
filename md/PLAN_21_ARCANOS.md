@@ -600,6 +600,63 @@ que identifica de quién es el turno activo en cada momento.
   - Versiones subidas: `APP_VERSION` y `CACHE` → **4.9.5** (`fiesta-v4.9.5`).
   - Pendiente de 9.2 (según §9.2 del plan): resaltado del turno activo en la barra y
     repaso de los arcanos que dependen de ocultar información con la mesa a la vista.
+- 🔧 **Fases 9.3 + 9.4 en marcha** (2026-07-12). Tarot por posición, 100 % en código.
+  Reúne 9.3 (todos los efectos aplicados por código, sin reglas «de palabra») y 9.4
+  (cada posición condiciona el efecto). La fuente de efectos es la tabla «PROPUESTA
+  DE TAROT POR POSICIÓN» del final de este archivo. Se hace por pasos:
+  - ✅ **Paso 1 — Datos** (`data/blackjack/tarot.js`): reescrito a la estructura
+    `posiciones: { pasado, presente, futuro }`, cada una con `normal`/`invertida` y
+    su `{ efecto, texto, fiesta? }`. Son **132 efectos** (22 arcanos × 3 posiciones ×
+    2 orientaciones), con **wording unificado** (multiplicadores «×N,M», «+X fichas»,
+    «apuesta mínima/máxima», sin aclaraciones entre paréntesis) y líneas `fiesta` de
+    sabor en un subconjunto. Claves de efecto `<slug>-<pa|pr|fu>-<n|i>`. Eliminado el
+    concepto `implementado`/«regla manual».
+  - ✅ **Paso 2 — Tirada** (`js/blackjack/tarot.js`): `bjTarotTirada` coloca los 3
+    arcanos en Pasado/Presente/Futuro y cada uno toma el efecto de SU posición;
+    `bjTarotTiene` ya no exige `implementado`; el revelado y el panel muestran la
+    posición y ya no pintan la etiqueta de regla manual.
+  - ✅ **Paso 3 — Tragos del tarot en los datos**: los 132 efectos llevan ya su línea
+    `fiesta` (que te toque un arcano casi siempre cuesta trago), aparte de los tragos
+    base de §7 (deuda, perder, blackjack…).
+  - ✅ **Paso 4 — Multiplicador por jugador + display**: `bjArcadeMultJugador(i)`
+    concentra TODOS los arcanos que multiplican ganancias (Rueda, Juicio, Emperador,
+    Carro, Luna, Fuerza, Diablo) y devuelve el ×N de cada jugador; la resolución solo
+    multiplica lo que se GANA (nunca pérdidas ni empates). Es una función **pura** (el
+    display la llama en cada repintado). Display: chip `✨ ×N` en la cabecera de
+    `bj-arcade` (dentro de la fila que ya existía, **no crece en vertical**; se enciende
+    en dorado si ≠ ×1), un `×N` pequeño por rival en la barra de la mesa compartida, y
+    el ×N en la fila de cada jugador en la resolución de ronda. Por defecto, ×1.
+  - ✅ **Paso 5 — Reglas de mesa y rastro** (`arcade.js` + `tarot.js`): helpers nuevos
+    `bjTarotAplica` (los efectos de **Futuro** solo cuentan en la última ronda) y
+    `bjTarotEsUltimaRonda`. Ya aplican por código: **Torre** (límite del dealer, las 3
+    posiciones), **Emperatriz** (pago del natural, tope de apuesta, bonus/castigo de
+    Pasado, mitad de pila en Futuro), **Mundo** (21 exacto, natural ×1, ±10 de Pasado),
+    **Justicia** (empates), **Hierofante** (ruleset de Presente y +3 de Pasado),
+    **Fuerza** (con cuántas cartas/qué totales se dobla, ×1,1 y −5), **Colgado**
+    (rendirse tarde/prohibido, 10 % recuperado), **Templanza** (plantarse, pagos por
+    4–5 cartas, recargo de mínima), **Muerte** (plantarse ≥17, mínimas forzadas, ×0,8),
+    **Ermitaño** y **Luna invertida** y **Sol** (visibilidad de la mano del dealer),
+    **Sacerdotisa** (contador oculto / cuenta de ases), **Emperador** (líder no se rinde,
+    último dobla, ×2 y +2 por ronda en cabeza), **Carro** (racha, mínimas, ×2),
+    **Diablo** (trasvases de fichas), **Loco invertido** y **Enamorados invertido**
+    (Pasado: recargos y apuesta doble), **Mago invertido** (se acabó doblar).
+    Rastro nuevo por jugador (`racha`, `victorias`, `bustPrevio`, `ganoPrevio`,
+    `perdidasSeguidas`, `recargoMin`, `rondasLider`, `blackjacksPrevios`, `multRueda`,
+    `multFijo`, `ganoACiegas`, `dobloYGano`) y banderas de mesa (`magoNoDoblar`,
+    `dealerArraso`, `dealerRevelado`, `contadorOculto`, `dealerBlando`).
+  - ⏳ **Pendiente (siguientes batches)**:
+    1. **Valor de carta**: La Estrella (ases a 12 / 1 / 0, las 6 variantes) y La Rueda
+       invertida (valores que cuentan 0). Necesitan un hook de valor en `motor.js`.
+    2. **Interactivos** (piden UI en el turno): El Loco (descartar mano), Los Enamorados
+       (descartar/cambiar carta), El Mago (cambiar carta; el dealer cambia la suya),
+       La Sacerdotisa (espiar el mazo), El Juicio (2.ª oportunidad tras pasarse),
+       El Diablo (tentar al diablo con 3 cartas), El Carro (apostar por el líder),
+       La Muerte (22 → 12), El Mago Futuro (doblar obligatorio), El Hierofante Futuro
+       (ruleset solo en la última ronda), La Justicia de Pasado (karma de empates).
+    3. **Fin de partida**: El Mundo (Futuro), que suma/resta 15 por cada 21 o blackjack.
+    4. **Saldo de tragos del tarot**: que la línea `fiesta` de cada arcano se sume al
+       recuento del final de ronda solo cuando el efecto ha disparado de verdad.
+  - Versiones subidas: `APP_VERSION` y `CACHE` → **4.9.9**.
 
 
 
@@ -624,8 +681,8 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada vez que alguien gana plantándose con su mano inicial, se le aplica un multiplicador extra (por definir). | Cada vez que alguien se pasa, su apuesta mínima sube un escalón (por definir) el resto de la partida. |
-| Presente | Una vez por partida, cada jugador puede descartar su mano inicial y robar una nueva. | Una vez por partida, cada jugador puede descartar su mano inicial, pero la mano nueva se juega a ciegas: se planta sola sin poder pedir (el salto al vacío). |
+| Pasado | Cada vez que alguien gana plantándose con su mano inicial, se le aplica un multiplicador extra de x1,1 que se va sumando en la partida (siguiente vez x1,2...). | Cada vez que alguien se pasa, su apuesta mínima sube dos fichas el resto de la partida. |
+| Presente | Una vez por partida, cada jugador puede descartar su mano inicial y robar una nueva. | Una vez por partida, cada jugador puede descartar su mano inicial, pero el jugador está obligado a plantarse sin poder pedir ninguna carta. |
 | Futuro | En la última ronda, todos pueden descartar su mano inicial y robar una nueva. | En la última ronda, todos deben descartar su mano inicial y robar una nueva a ciegas, plantándose sin poder pedir. |
 
 ---
@@ -634,8 +691,8 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Si se obtiene un blackjack, el jugador puede intercambiar una carta de su mano por otra del mazo en la siguiente ronda. | Si el dealer saca blackjack, los jugadores pierden el derecho a doblar el resto de la partida. |
-| Presente | Una vez por partida se puede intercambiar una carta de tu mano. | Una vez por partida, si su mano suma 17, el dealer sustituye su peor carta por otra del mazo. |
+| Pasado | Si se obtiene un blackjack, el jugador puede intercambiar una carta de su mano por la primera del mazo en la siguiente ronda. | Si el dealer saca blackjack, los jugadores pierden el derecho a doblar el resto de la partida. |
+| Presente | Una vez por partida se puede intercambiar una carta de tu mano por la siguiente del mazo. | Solo la primera vez en la partida, si su mano suma 17, el dealer sustituye su peor carta por otra del mazo. |
 | Futuro | Todos los jugadores deben doblar en la última ronda a menos que obtengan blackjack | Nadie puede doblar en la última ronda. |
 
 ---
@@ -644,7 +701,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada vez que alguien gana sin pedir ninguna carta extra, puede espiar la carta superior del mazo antes de pedir otra carta | Si alguien se ha pasado, el contador de cartas se oculta durante una ronda. |
+| Pasado | Si se ganó la ronda anterior sin pedir ninguna carta extra, puede espiar la carta superior del mazo antes de pedir otra carta | Si alguien se ha pasado, el contador de cartas se oculta durante una ronda. |
 | Presente | El contador de cartas restantes muestra también cuantos ases quedan durante toda la partida | El contador de cartas permanece oculto toda la partida. |
 | Futuro | En la última ronda, todos ven la siguiente carta del mazo antes de decidir. | En la última ronda, el contador permanecerá oculto. |
 
@@ -654,9 +711,9 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada blackjack natural conseguido da un bonus acumulado: el próximo blackjack de ese jugador paga x2,5 en vez de x1,5. | Tras obtener un bust, reduce el pago de un blackjack para ese jugador de x1,5 a x1,25  |
+| Pasado | Cada blackjack natural conseguido da un bonus acumulado: el próximo blackjack de ese jugador suma x1,0 (el siguiente blackjack multiplica x2,5...). | Tras obtener un bust, reduce el pago de un blackjack para ese jugador de x1,5 a x1,25  |
 | Presente | El blackjack natural paga x2 toda la partida. | La apuesta máxima queda limitada. |
-| Futuro | En la última ronda, el blackjack natural paga x3. | En la última ronda, un blackjack natural reduce las fichas del jugador a la mitad. |
+| Futuro | En la última ronda, el blackjack natural paga x3. | En la última ronda, un blackjack natural reduce las fichas del jugador un 25%. |
 
 ---
 
@@ -664,8 +721,8 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | El líder de la partida obtiene +2 fichas adicionales multiplicadas por el número de rondas en cabeza. | El último de la partida obtiene un multiplicador x2 para la siguiente ronda en caso de victoria. |
-| Presente | Quien vaya líder en cada momento no puede rendirse, toda la partida. | El último clasificado siempre puede doblar aunque no esté permitido. |
+| Pasado | El líder de la partida obtiene +5 fichas adicionales multiplicadas por el número de rondas en cabeza. | El último de la partida obtiene un multiplicador x2 para la siguiente ronda en caso de victoria. |
+| Presente | Quien vaya líder en cada momento no puede rendirse. | El último clasificado siempre puede doblar aunque no esté permitido. |
 | Futuro | En la última ronda, si el líder gana, obtiene un multiplicador x2. | En la última ronda, si el último clasificado gana, obtiene un multiplicador x2 |
 
 ---
@@ -674,7 +731,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada vez que un jugador gana plantándose sin usar ninguna regla opcional (doblar, dividir o rendirse), recibe +3 fichas (juego ortodoxo). | Cada vez que un jugador gana tras usar una regla opcional (doblar, dividir o rendirse), recibe +3 fichas (heterodoxia). |
+| Pasado | Cada vez que un jugador gana plantándose sin doblar o dividir, recibe +3 fichas. | Cada vez que un jugador gana tras usar doblar o dividir, recibe +3 fichas. |
 | Presente | Se desactivan todas las reglas opcionales, solo se puede plantar y pedir. | Se activan todas las reglas opcionales independientemente de si están marcadas. |
 | Futuro | En la última ronda se desactivan todas las reglas opcionales. | En la última ronda se activan todas las reglas opcionales. |
 
@@ -685,7 +742,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
 | Pasado | Si un jugador pierde dos rondas seguidas, puede descartar una carta inical de su próxima mano. | Si un jugador gana dos rondas seguidas, debe doblar su apuesta la próxima vez que juegue. |
-| Presente | Una vez por partida, cada jugador puede descartar una de sus dos cartas iniciales. | Al recibir la mano, cada jugador debe cambiar a ciegas una de sus dos cartas iniciales por la carta superior del mazo (elección forzada). |
+| Presente | Una vez por partida, cada jugador puede descartar una de sus dos cartas iniciales. | Al recibir la mano, cada jugador debe cambiar a ciegas una de sus dos cartas iniciales por la carta superior del mazo. |
 | Futuro | En la última ronda, todos pueden elegir entre dos manos iniciales distintas, dividir queda desactivado. | En la última ronda, cada jugador debe cambiar a ciegas una de sus dos cartas iniciales por la carta superior del mazo. |
 
 ---
@@ -695,7 +752,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
 | Pasado | Cada racha de 2 victorias seguidas de un jugador le da +5 fichas de bonus. | Cada vez que alguien gana, su siguiente apuesta debe ser al menos el doble de la mínima |
-| Presente | Subirse al carro: en tu turno puedes apostar por el líder actual; si su mano gana esa ronda, cobras +3 fichas de bonus aunque tu propia mano pierda. | La apuesta mínima sube un escalón cada vez que alguien encadena 2 victorias. |
+| Presente | En cada ronda, cobras +3 fichas si el lider de la partida gana aunque tu propia mano pierda. | La apuesta mínima sube dos fichas cada vez que alguien encadena 2 victorias. |
 | Futuro | Los jugadores que lleguen en racha de victorias a la última ronda obtienen un multiplicador x2. | En la última ronda, quien más victorias lleve debe apostar el doble de la apuesta máxima. |
 
 ---
@@ -704,7 +761,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada vez que un jugador dobla y gana, se le aplica un multiplicador de x1,1. | Cada vez que un jugador dobla y pierde, pierde 5 fichas adicionales |
+| Pasado | Cada vez que un jugador dobla y gana, se le aplica un multiplicador de x1,1 (siguiente vez x1,2...). | Cada vez que un jugador dobla y pierde, pierde 5 fichas adicionales |
 | Presente | Puede doblarse con cualquier número de cartas toda la partida. | Solo puede doblarse con 9, 10 u 11. |
 | Futuro | Los jugadores que doblen en la última partida reciben un multiplicador a sus fichas totales de x1,1 en caso de victoria o de x0,9 en caso de perder. | En la última ronda, solo se puede doblar con 9, 10 u 11. |
 
@@ -734,9 +791,9 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Si un jugador lleva más empates perdidos que ganados en la partida, gana automáticamente su próximo empate. | Si un jugador lleva más empates ganados que perdidos en la partida, pierde automáticamente su próximo empate. |
+| Pasado | Si la ronda anterior se saldo con empate, ese jugador obtiene un multiplicador de x1,1 en la siguiente ronda. | Si la ronda anterior se saldo con empate, ese jugador obtiene un multiplicador de x0,9 en la siguiente ronda. |
 | Presente | Los jugadores ganan siempre los empates. | El dealer gana siempre los empates. |
-| Futuro | En la última ronda, los empates favorecen al jugador. | En la última ronda, los empates favorecen al dealer. |
+| Futuro | Al final de la partida, el jugador con más empates obitene una bonificación de x1,2 a todas sus fichas (no aplica si nadie empata, en caso de empate a empates, ambos reciben el bonus) | Al final de la partida, el jugador con más empates reduce sus fichas en 15 unidades |
 
 ---
 
@@ -756,7 +813,7 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 |-----------|---------|---------|
 | Pasado | Cada bust reduce a la mitad la apuesta mínima de ese jugador en su siguiente mano. |  Cada bust fija la siguiente apuesta de ese jugador obligatoriamente a la mínima. |
 | Presente | Pasarse con 22 reduce tu puntuación a 12, permitiendo seguir jugando. | Nadie puede plantarse con menos de 17 durante toda la partida. |
-| Futuro | En la última ronda, cualquier bust se convierte en 12. | Hacer un bust en la última ronda aplica un multiplicador a las fichas totales de x0,8. |
+| Futuro | En la última ronda, el primer bust de cada jugador se convierte en 12. | Hacer un bust en la última ronda aplica un multiplicador a las fichas totales de x0,8. |
 
 ---
 
@@ -764,8 +821,8 @@ Representa profecías, efectos para próximas rondas o para el final de la parti
 
 | Posición | Normal | Invertida |
 |-----------|---------|---------|
-| Pasado | Cada vez que un jugador gana plantándose con 4 o más cartas, acumula +3 fichas de bonus (paciencia recompensada). | Cada vez que un jugador se planta con su mano inicial (2 cartas), su apuesta mínima sube un escalón (+5) el resto de la partida (impaciencia). |
-| Presente | Plantarse con 5 o más cartas sin pasarse paga  como un blackjack. | No puedes plantarte con la mano inicial. |
+| Pasado | Cada vez que un jugador gana plantándose con 4 o más cartas, acumula un multiplicador de x1,1. | Cada vez que un jugador se planta con su mano inicial (2 cartas), su apuesta mínima sube un escalón (+5) el resto de la partida. |
+| Presente | Plantarse con 5 o más cartas sin pasarse paga como un blackjack. | No puedes plantarte con la mano inicial, siempre se debe pedir. |
 | Futuro | En la última ronda, plantarse con 4+ cartas sin pasarse paga como blackjack. | No puedes plantarte con la mano inicial ni con menos de 16 en la última ronda. |
 
 ---
