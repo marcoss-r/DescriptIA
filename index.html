@@ -653,13 +653,11 @@
 
       <!-- Fase "apostando": stepper de apuesta + repartir. -->
       <div class="bj-controles" id="bj-zona-apuesta">
-        <div class="bj-apuesta-fila">
-          <span class="ayuda">Apuesta</span>
-          <div class="stepper" data-stepper="bj-apuesta">
-            <button type="button" class="stepper-btn" data-paso="-1">−</button>
-            <span class="stepper-valor" id="bj-valor-apuesta">5</span>
-            <button type="button" class="stepper-btn" data-paso="1">+</button>
-          </div>
+        <p>Tu apuesta:</p>
+        <div class="stepper" data-stepper="bj-apuesta">
+          <button type="button" class="stepper-btn" data-paso="-1">−</button>
+          <span class="stepper-valor" id="bj-valor-apuesta">5</span>
+          <button type="button" class="stepper-btn" data-paso="1">+</button>
         </div>
         <button type="button" id="bj-btn-repartir">Repartir</button>
       </div>
@@ -788,8 +786,10 @@
     <!-- Mesa del Arcade: el jugador de turno juega su mano viendo la carta del
          dealer. Sin botón «Atrás» (rompería la ronda). Lo pinta arcade.js. -->
     <section class="pantalla con-scroll" data-pantalla="bj-arcade">
+      <!-- El nombre va en su propia línea, a la altura de los botones ← y 🔮 de las
+           esquinas, para que un nombre largo no empuje la cabecera contra ellos. -->
+      <div class="bj-dato bj-arcade-nombre" id="bj-arcade-turno-nombre"></div>
       <div class="bj-cabecera">
-        <div class="bj-dato" id="bj-arcade-turno-nombre"></div>
         <div class="bj-dato" aria-label="Tu pila">🪙 <span id="bj-arcade-pila"></span></div>
         <div class="bj-dato bj-dato-mult" aria-label="Tu multiplicador de ganancias">✨ <span id="bj-arcade-mult">×1</span></div>
         <div class="bj-dato" aria-label="Cartas en el zapato">🂠 <span id="bj-arcade-restantes"></span></div>

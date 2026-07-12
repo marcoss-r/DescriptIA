@@ -1401,6 +1401,19 @@ button.secundario:hover {
   padding: 0.4rem 0.8rem;
   font-weight: 700;
 }
+/* Nombre del jugador de turno en la mesa Arcade: primera línea, subida a la banda
+   de los botones absolutos ← y 🔮 (top 0.75rem, 44px de alto; el padding-top de la
+   pantalla es 2rem, de ahí el -1.25rem). Se acota el ancho para no pisar esos
+   botones y un nombre muy largo se corta con puntos suspensivos. */
+.bj-arcade-nombre {
+  margin-top: -1.25rem;
+  min-height: 44px;
+  line-height: calc(44px - 0.8rem); /* alto del botón menos el padding vertical de .bj-dato */
+  max-width: calc(100% - 4.5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Multiplicador de ganancias del jugador de turno. Vive dentro de la cabecera que ya
    existe (no añade alto a la mesa). En ×1 pasa desapercibido; cuando un arcano lo
    toca, se enciende en dorado. */
@@ -1633,11 +1646,6 @@ button.secundario:hover {
 .bj-controles[hidden],
 .bj-config-fila[hidden] {
   display: none;
-}
-.bj-apuesta-fila {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
 }
 /* Acciones de la mesa (Pedir/Plantarse/Doblar/Dividir/Rendirse), en Clásico y
    Arcade. Botones REDONDOS de una letra/símbolo, coloreados, en dos filas
