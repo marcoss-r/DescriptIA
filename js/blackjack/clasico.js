@@ -615,28 +615,39 @@ function bjMostrarRebarajando(cb) {
 //  Estadísticas
 // ============================================================
 
-// Abre el overlay de estadísticas con los datos actuales.
-function bjAbrirStats() {
-  const s = bjClasico.stats;
+// Filas «etiqueta → valor» de las estadísticas de un estado del Clásico. Las usan el
+// overlay 📊 de la mesa (con `bjClasico`, la banca viva) y la pantalla de estadísticas
+// del menú (con lo guardado, ver bjClasicoDatosGuardados).
+function bjClasicoStatsFilas(datos) {
+  const s = datos.stats;
   const pct = s.manos ? Math.round((s.victorias / s.manos) * 100) : 0;
-  const filas = [
-    ["Banca actual", bjFormatearFichas(bjClasico.banca)],
-    ["Récord de banca", bjFormatearFichas(bjClasico.bancaMax)],
+  return [
+    ["Banca actual", bjFormatearFichas(datos.banca)],
+    ["Récord de banca", bjFormatearFichas(datos.bancaMax)],
     ["Manos jugadas", s.manos],
     ["Victorias", pct + "%"],
     ["Mejor racha", s.mejorRacha],
   ];
+}
+
+// Una fila de estadísticas ya montada (etiqueta a la izquierda, valor a la derecha).
+function bjClasicoCrearStatsFila(etiqueta, valor) {
+  const fila = document.createElement("div");
+  fila.className = "bj-stats-fila";
+  const izq = document.createElement("span");
+  izq.textContent = etiqueta;
+  const der = document.createElement("span");
+  der.textContent = valor;
+  fila.append(izq, der);
+  return fila;
+}
+
+// Abre el overlay de estadísticas de la mesa con los datos actuales.
+function bjAbrirStats() {
   const panel = document.getElementById("bj-stats-panel");
   panel.innerHTML = "<h2>Estadísticas</h2>";
-  filas.forEach(([etiqueta, valor]) => {
-    const fila = document.createElement("div");
-    fila.className = "bj-stats-fila";
-    const izq = document.createElement("span");
-    izq.textContent = etiqueta;
-    const der = document.createElement("span");
-    der.textContent = valor;
-    fila.append(izq, der);
-    panel.appendChild(fila);
+  bjClasicoStatsFilas(bjClasico).forEach(([etiqueta, valor]) => {
+    panel.appendChild(bjClasicoCrearStatsFila(etiqueta, valor));
   });
   document.getElementById("bj-stats").hidden = false;
 }
@@ -661,28 +672,45 @@ function bjClasicoGuardar() {
   }
 }
 
-// Carga banca, récord y estadísticas si los hay. Defensivo: valida cada campo para
-// no romper si el guardado está corrupto o es de una versión anterior.
-function bjClasicoCargar() {
-  let datos = null;
+// Lee lo guardado (banca, récord de banca y estadísticas) SIN tocar la mesa: la
+// pantalla de estadísticas del menú lo consulta sin riesgo de pisar una mano en
+// curso. Defensivo: valida cada campo y, si falta o el guardado está corrupto,
+// devuelve el valor de partida.
+function bjClasicoDatosGuardados() {
+  const datos = {
+    banca: BJ_BANCA_INICIAL,
+    bancaMax: BJ_BANCA_INICIAL,
+    stats: { manos: 0, victorias: 0, rachaActual: 0, mejorRacha: 0 },
+  };
+
+  let guardado = null;
   try {
     const texto = localStorage.getItem(BJ_CLASICO_CLAVE);
-    if (texto) datos = JSON.parse(texto);
+    if (texto) guardado = JSON.parse(texto);
   } catch (e) {
-    return;
+    return datos;
   }
-  if (!datos || typeof datos !== "object") return;
+  if (!guardado || typeof guardado !== "object") return datos;
 
-  if (typeof datos.banca === "number") bjClasico.banca = datos.banca;
-  if (typeof datos.bancaMax === "number") bjClasico.bancaMax = datos.bancaMax;
-  if (datos.stats && typeof datos.stats === "object") {
-    bjClasico.stats = {
-      manos: datos.stats.manos || 0,
-      victorias: datos.stats.victorias || 0,
-      rachaActual: datos.stats.rachaActual || 0,
-      mejorRacha: datos.stats.mejorRacha || 0,
+  if (typeof guardado.banca === "number") datos.banca = guardado.banca;
+  if (typeof guardado.bancaMax === "number") datos.bancaMax = guardado.bancaMax;
+  if (guardado.stats && typeof guardado.stats === "object") {
+    datos.stats = {
+      manos: guardado.stats.manos || 0,
+      victorias: guardado.stats.victorias || 0,
+      rachaActual: guardado.stats.rachaActual || 0,
+      mejorRacha: guardado.stats.mejorRacha || 0,
     };
   }
+  return datos;
+}
+
+// Vuelca lo guardado en el estado del Clásico (al entrar a la mesa).
+function bjClasicoCargar() {
+  const datos = bjClasicoDatosGuardados();
+  bjClasico.banca = datos.banca;
+  bjClasico.bancaMax = datos.bancaMax;
+  bjClasico.stats = datos.stats;
 }
 
 // ============================================================

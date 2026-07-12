@@ -1982,3 +1982,47 @@ button.secundario:hover {
   padding: 0;
   background: none;
 }
+
+/* ==========================================================
+   21 Arcanos — Estadísticas (menú, Clásico y leaderboard)
+   ========================================================== */
+
+/* Clásico: las filas del overlay 📊, aquí sueltas en la pantalla (sin panel que las
+   contenga), así que cada una se dibuja como su propia tarjeta. */
+#bj-stats-clasico-lista .bj-stats-fila {
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  padding: 0.6rem 0.9rem;
+}
+
+/* Arcade: una fila por marca del leaderboard. Comparte los colores de medalla del
+   podio (.podio-oro/plata/bronce) pero apila en vertical: fichas, reglas y tirada. */
+.bj-lb-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: var(--color-superficie);
+  border-radius: var(--radio-borde-chico);
+  border-left: 5px solid transparent;
+  padding: 0.7rem 1rem;
+  text-align: left;
+}
+.bj-lb-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.bj-lb-reglas {
+  font-size: 0.8rem;
+  color: var(--color-texto-tenue);
+}
+.bj-lb-cartas {
+  display: flex;
+  gap: 0.4rem;
+}
+.bj-lb-cartas img {
+  width: 44px;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 4px;
+}

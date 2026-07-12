@@ -55,12 +55,14 @@ function bjEntrarMenu() {
 }
 
 // Engancha los botones del menú de modos. Se llama una vez al cargar.
-// bjEntrarClasico vive en clasico.js y bjEntrarArcade en arcade.js; ambos existen
-// ya cuando se dispara el click (sus .js se cargan antes que main.js).
+// bjEntrarClasico vive en clasico.js, bjEntrarArcade en arcade.js y bjEntrarStats en
+// estadisticas.js; los tres existen ya cuando se dispara el click (sus .js se cargan
+// antes que main.js).
 function bjConectarMenu() {
   document.getElementById("bj-btn-clasico").addEventListener("click", bjEntrarClasico);
   document.getElementById("bj-btn-arcade").addEventListener("click", bjEntrarArcade);
   document.getElementById("bj-btn-reglas").addEventListener("click", bjEntrarReglas);
+  document.getElementById("bj-btn-stats-menu").addEventListener("click", bjEntrarStats);
 }
 
 // ============================================================

@@ -580,7 +580,35 @@
       <button type="button" id="bj-btn-clasico">Modo Clásico</button>
       <button type="button" id="bj-btn-arcade">Modo Arcade</button>
       <button type="button" class="secundario" id="bj-btn-reglas">Reglas de la mesa</button>
+      <button type="button" class="secundario" id="bj-btn-stats-menu">Estadísticas</button>
       <button type="button" class="boton-volver" data-volver="fiesta" aria-label="Volver a FIEsta">←</button>
+    </section>
+
+    <!-- Estadísticas: elegir de qué modo. Las tres pantallas (este menú, las del
+         Clásico y el leaderboard del Arcade) las pinta js/blackjack/estadisticas.js. -->
+    <section class="pantalla" data-pantalla="bj-stats-menu">
+      <h1>Estadísticas</h1>
+      <p>¿De qué modo?</p>
+      <button type="button" id="bj-btn-stats-clasico">Modo Clásico</button>
+      <button type="button" id="bj-btn-stats-arcade">Modo Arcade (solitario)</button>
+      <button type="button" class="boton-volver" data-volver="bj-menu" aria-label="Volver al menú">←</button>
+    </section>
+
+    <!-- Estadísticas del Clásico: las mismas que el overlay 📊 de la mesa, pero
+         leídas de lo guardado (banca, récord de banca, manos, victorias, racha). -->
+    <section class="pantalla con-scroll" data-pantalla="bj-stats-clasico">
+      <h1>Modo Clásico</h1>
+      <div class="lista-scroll" id="bj-stats-clasico-lista"></div>
+      <button type="button" class="boton-volver" data-volver="bj-stats-menu" aria-label="Volver a estadísticas">←</button>
+    </section>
+
+    <!-- Estadísticas del Arcade: leaderboard del solitario (4 posiciones como mucho).
+         Cada marca guarda las fichas, el ruleset con el que se jugó y su tirada. -->
+    <section class="pantalla con-scroll" data-pantalla="bj-stats-arcade">
+      <h1>Modo Arcade</h1>
+      <p class="ayuda">Las 4 mejores partidas en solitario.</p>
+      <div class="lista-scroll" id="bj-stats-arcade-lista"></div>
+      <button type="button" class="boton-volver" data-volver="bj-stats-menu" aria-label="Volver a estadísticas">←</button>
     </section>
 
     <!-- Configuración del ruleset: toggles de reglas opcionales. La lista y el
@@ -873,6 +901,7 @@
   <script src="js/blackjack/clasico.js"></script>
   <script src="js/blackjack/animaciones.js"></script>
   <script src="js/blackjack/arcade.js"></script>
+  <script src="js/blackjack/estadisticas.js"></script>
   <script src="js/blackjack/main.js"></script>
 
   <!-- Arranque del núcleo: el último, muestra el hub -->

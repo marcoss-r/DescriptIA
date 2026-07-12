@@ -27,7 +27,9 @@
 const BJ_ARCADE_JUG_INICIAL = 2;
 const BJ_PILA_INICIAL = 60; // pila inicial fija, no configurable
 const BJ_ARCADE_RONDAS_SOLITARIO = 8; // solitario: rondas fijas (plan §5)
-const BJ_ARCADE_RECORD_CLAVE = "blackjack_arcade_record"; // récord del solitario
+const BJ_ARCADE_RECORDS_CLAVE = "blackjack_arcade_records"; // leaderboard del solitario
+const BJ_ARCADE_RECORD_CLAVE = "blackjack_arcade_record";   // récord único de antes (se migra)
+const BJ_ARCADE_RECORDS_MAX = 4; // posiciones del leaderboard: lo que sale de aquí se borra
 
 // Estado del Arcade. `jugadores` guarda la pila persistente durante la partida;
 // `jugadoresRonda` es el estado de la ronda en curso (paralelo a `jugadores`).
@@ -1062,18 +1064,28 @@ function bjArcadePintarFilaRanking(jugador, puesto, cont) {
   cont.appendChild(fila);
 }
 
-// Solitario: puntuación final = pila; se guarda y muestra el récord con su ruleset.
+// Solitario: puntuación final = pila; la partida entra en el leaderboard (si da) y se
+// muestra el récord vigente con su ruleset.
 function bjArcadeFinSolitario() {
   const puntuacion = bjArcade.jugadores[0].pila;
-  const record = bjArcadeCargarRecord();
+  const mejorAnterior = bjArcadeCargarRecords()[0] || null;
 
-  // ¿Nuevo récord? Se guarda con el ruleset EFECTIVO con el que se ha jugado
-  // (si el Hierofante lo cambió, el récord refleja las reglas reales).
-  const esRecord = !record || puntuacion > record.puntuacion;
-  if (esRecord) {
-    bjArcadeGuardarRecord({ puntuacion, ruleset: Object.assign({}, bjArcade.ruleset) });
-  }
-  const rulesetMostrado = esRecord ? bjArcade.ruleset : record.ruleset;
+  // La marca se guarda con el ruleset EFECTIVO con el que se ha jugado (si el
+  // Hierofante lo cambió, el récord refleja las reglas reales) y con la tirada que le
+  // tocó, para poder enseñarla luego en el leaderboard.
+  const records = bjArcadeRegistrarRecord({
+    puntuacion,
+    ruleset: Object.assign({}, bjArcade.ruleset),
+    tarot: bjEstado.tarot.map((entrada) => ({
+      slug: entrada.slug,
+      nombre: entrada.nombre,
+      invertida: entrada.invertida,
+      posicion: entrada.posicion,
+    })),
+  });
+
+  const esRecord = !mejorAnterior || puntuacion > mejorAnterior.puntuacion;
+  const rulesetMostrado = records[0].ruleset;
 
   document.getElementById("bj-fin-titulo").textContent = esRecord ? "¡Nuevo récord! 🏆" : "Fin de la partida 🏁";
 
@@ -1090,10 +1102,9 @@ function bjArcadeFinSolitario() {
   fila.append(etiqueta, valor);
   cont.appendChild(fila);
 
-  // Récord (el recién guardado, o el anterior si no se ha batido).
-  const mejor = esRecord ? puntuacion : record.puntuacion;
+  // Récord vigente: la primera marca del leaderboard (puede ser la de esta partida).
   document.getElementById("bj-fin-record").textContent =
-    `Récord: 🪙${bjFormatearFichas(mejor)} (reglas: ${bjArcadeTextoRuleset(rulesetMostrado)}).`;
+    `Récord: 🪙${bjFormatearFichas(records[0].puntuacion)} (reglas: ${bjArcadeTextoRuleset(rulesetMostrado)}).`;
 }
 
 // Texto con las reglas opcionales activas de un ruleset (para acompañar el récord).
@@ -1104,23 +1115,68 @@ function bjArcadeTextoRuleset(ruleset) {
   return activas.length ? activas.join(", ") : "reglas de casino";
 }
 
-function bjArcadeCargarRecord() {
-  try {
-    const texto = localStorage.getItem(BJ_ARCADE_RECORD_CLAVE);
-    if (!texto) return null;
-    const datos = JSON.parse(texto);
-    if (datos && typeof datos.puntuacion === "number") return datos;
-  } catch (e) {
-    return null;
-  }
-  return null;
+// ============================================================
+//  Leaderboard del solitario (persistente)
+// ============================================================
+//
+// Solo se guardan las BJ_ARCADE_RECORDS_MAX mejores marcas: lo que sale del podio se
+// borra de localStorage. Cada marca lleva las fichas finales, el ruleset efectivo y la
+// tirada de tarot con la que se jugó (la pantalla de estadísticas la enseña).
+
+// Mete una partida en el leaderboard, lo recorta al máximo y lo guarda. En caso de
+// empate la marca nueva queda por DETRÁS de las que ya tenían esa puntuación (sort
+// estable): un empate no destrona al que llegó antes. Devuelve el leaderboard guardado.
+function bjArcadeRegistrarRecord(entrada) {
+  const records = bjArcadeCargarRecords();
+  records.push(entrada);
+  records.sort((a, b) => b.puntuacion - a.puntuacion);
+  const podio = records.slice(0, BJ_ARCADE_RECORDS_MAX);
+  bjArcadeGuardarRecords(podio);
+  return podio;
 }
 
-function bjArcadeGuardarRecord(record) {
+// Lee el leaderboard (de mejor a peor). Si aún no existe, migra el récord ÚNICO de la
+// versión anterior (`blackjack_arcade_record`, sin tarot) para no perderlo; su clave se
+// borra en el primer guardado. Defensivo: descarta lo que no sea una marca válida.
+function bjArcadeCargarRecords() {
+  const guardado = bjArcadeLeerJSON(BJ_ARCADE_RECORDS_CLAVE);
+  const lista = Array.isArray(guardado)
+    ? guardado
+    : [bjArcadeLeerJSON(BJ_ARCADE_RECORD_CLAVE)];
+
+  return lista
+    .map(bjArcadeNormalizarRecord)
+    .filter((record) => record !== null)
+    .slice(0, BJ_ARCADE_RECORDS_MAX);
+}
+
+// Deja una marca en su forma canónica, o null si no lo es (guardado corrupto, o de una
+// versión anterior sin tarot: entonces se queda sin cartas que enseñar).
+function bjArcadeNormalizarRecord(entrada) {
+  if (!entrada || typeof entrada.puntuacion !== "number") return null;
+  return {
+    puntuacion: entrada.puntuacion,
+    ruleset: entrada.ruleset && typeof entrada.ruleset === "object" ? entrada.ruleset : null,
+    tarot: Array.isArray(entrada.tarot) ? entrada.tarot : [],
+  };
+}
+
+function bjArcadeGuardarRecords(records) {
   try {
-    localStorage.setItem(BJ_ARCADE_RECORD_CLAVE, JSON.stringify(record));
+    localStorage.setItem(BJ_ARCADE_RECORDS_CLAVE, JSON.stringify(records));
+    localStorage.removeItem(BJ_ARCADE_RECORD_CLAVE); // ya migrado: la clave vieja sobra
   } catch (e) {
-    console.warn("No se pudo guardar el récord del Arcade:", e);
+    console.warn("No se pudo guardar el leaderboard del Arcade:", e);
+  }
+}
+
+// Lee y parsea una clave de localStorage; null si no está o está corrupta.
+function bjArcadeLeerJSON(clave) {
+  try {
+    const texto = localStorage.getItem(clave);
+    return texto ? JSON.parse(texto) : null;
+  } catch (e) {
+    return null;
   }
 }
 
