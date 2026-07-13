@@ -38,6 +38,10 @@ const bjClasico = {
   fase: "apostando",     // "apostando" | "seguro" | "jugando" | "resuelto"
   bancaInicioMano: BJ_BANCA_INICIAL, // banca antes de apostar (para el "+X / −X")
   repartiendo: false,    // true durante la pausa de "rebarajando" (evita repartir 2 veces)
+  // true mientras una carta está girando y su pausa de lectura no ha terminado
+  // (bjTrasAnimacion): bloquea las acciones de turno para que no se pueda pedir/
+  // doblar/etc. dos veces sobre la misma carta a medio revelar.
+  animando: false,
 };
 
 // ============================================================
@@ -187,44 +191,63 @@ function bjTrasSeguro() {
 //  Turno del jugador (fase "jugando")
 // ============================================================
 
-// "Pedir": roba una carta a la mano activa; si se pasa, esa mano termina y se
-// pasa a la siguiente (o al dealer si no queda ninguna).
+// "Pedir": roba una carta a la mano activa. Si se pasa, la carta se ve (con su
+// volteo) antes de pasar a la siguiente mano o al dealer; mientras gira, `animando`
+// bloquea el resto de acciones para que no se pueda pedir dos veces sobre la misma
+// carta a medio girar.
 function bjPedir() {
   const c = bjClasico;
+  if (c.animando) return;
   if (c.fase !== "jugando") return;
   const mano = bjManoActiva();
   mano.cartas.push(bjRobar(c.mazo));
   if (bjEsBust(mano.cartas)) {
     mano.terminada = true;
-    bjAvanzarMano();
+    c.animando = true;
+    const esperaMs = bjClasicoRender();
+    bjTrasAnimacion(esperaMs, () => {
+      c.animando = false;
+      bjAvanzarMano();
+    });
   } else {
     bjClasicoRender(); // doblar/dividir dejan de estar disponibles con 3+ cartas
   }
 }
 
-// "Plantarse": la mano activa queda como está y se pasa a la siguiente.
+// "Plantarse": la mano activa queda como está y se pasa a la siguiente. No roba
+// carta, así que no hay nada que animar: avanza directamente.
 function bjPlantarse() {
-  if (bjClasico.fase !== "jugando") return;
+  const c = bjClasico;
+  if (c.animando) return;
+  if (c.fase !== "jugando") return;
   bjManoActiva().terminada = true;
   bjAvanzarMano();
 }
 
-// "Doblar": paga otra apuesta sobre la mano activa, roba UNA carta y la planta.
+// "Doblar": paga otra apuesta sobre la mano activa, roba UNA carta y la planta. La
+// carta se ve (con su volteo) antes de avanzar de mano.
 function bjDoblar() {
   const c = bjClasico;
+  if (c.animando) return;
   if (!bjPuedeDoblar()) return;
   const mano = bjManoActiva();
   c.banca -= mano.apuesta; // la segunda apuesta de esta mano
   mano.doblo = true;
   mano.cartas.push(bjRobar(c.mazo));
   mano.terminada = true;
-  bjAvanzarMano();
+  c.animando = true;
+  const esperaMs = bjClasicoRender();
+  bjTrasAnimacion(esperaMs, () => {
+    c.animando = false;
+    bjAvanzarMano();
+  });
 }
 
 // "Dividir" (split): separa un par en dos manos, cada una con su apuesta. No se
 // permite re-dividir (máximo dos manos). Los ases divididos reciben una sola carta.
 function bjDividir() {
   const c = bjClasico;
+  if (c.animando) return;
   if (!bjPuedeDividir()) return;
   const original = c.manos[0];
   c.banca -= c.apuesta; // segunda apuesta, igual a la primera
@@ -237,8 +260,10 @@ function bjDividir() {
   bjActivarMano(0); // reparte la 2.ª carta a la primera mano y sigue
 }
 
-// "Rendirse": abandona la mano y recupera la mitad de la apuesta (el dealer no juega).
+// "Rendirse": abandona la mano y recupera la mitad de la apuesta (el dealer no
+// juega). No roba carta, así que no hay nada que animar.
 function bjRendirse() {
+  if (bjClasico.animando) return;
   if (!bjPuedeRendirse()) return;
   bjResolver(true);
 }
@@ -255,17 +280,28 @@ function bjAvanzarMano() {
 }
 
 // Activa la mano `i`: si aún tiene una sola carta (recién dividida), le reparte la
-// segunda. Los ases divididos se plantan solos (una carta y a la siguiente mano).
+// segunda. Los ases divididos se plantan solos (una carta y a la siguiente mano):
+// como el jugador no llega a tocar nada, hay que esperar a que esa 2.ª carta
+// termine de verse antes de avanzar (si no, "pasa el móvil"/el dealer saltarían sin
+// enseñarla nunca, el mismo problema que al pedir).
 function bjActivarMano(i) {
   const c = bjClasico;
   c.manoActiva = i;
   const mano = c.manos[i];
-  if (mano.cartas.length === 1) {
-    mano.cartas.push(bjRobar(c.mazo));
-  }
+  const repartida = mano.cartas.length === 1;
+  if (repartida) mano.cartas.push(bjRobar(c.mazo));
   if (mano.deAses) {
     mano.terminada = true;
-    bjAvanzarMano();
+    if (repartida) {
+      c.animando = true;
+      const esperaMs = bjClasicoRender(); // se ve la 2.ª carta antes de plantarse sola
+      bjTrasAnimacion(esperaMs, () => {
+        c.animando = false;
+        bjAvanzarMano();
+      });
+    } else {
+      bjAvanzarMano();
+    }
   } else {
     bjClasicoRender();
   }
@@ -275,6 +311,7 @@ function bjActivarMano(i) {
 // fondos para la segunda apuesta.
 function bjPuedeDoblar() {
   const c = bjClasico;
+  if (c.animando) return false; // una carta está girando: nada es jugable todavía
   if (c.fase !== "jugando" || !bjEstado.ruleset.doblar) return false;
   const mano = bjManoActiva();
   return mano.cartas.length === 2 && !mano.deAses && c.banca >= mano.apuesta;
@@ -284,6 +321,7 @@ function bjPuedeDoblar() {
 // mismo valor, y fondos para la segunda apuesta.
 function bjPuedeDividir() {
   const c = bjClasico;
+  if (c.animando) return false; // una carta está girando: nada es jugable todavía
   if (c.fase !== "jugando" || !bjEstado.ruleset.dividir) return false;
   if (c.manos.length !== 1) return false;
   const cartas = c.manos[0].cartas;
@@ -295,6 +333,7 @@ function bjPuedeDividir() {
 // ¿Se puede rendir? Regla activa, una sola mano (no tras dividir) y primera decisión.
 function bjPuedeRendirse() {
   const c = bjClasico;
+  if (c.animando) return false; // una carta está girando: nada es jugable todavía
   return (
     c.fase === "jugando" &&
     bjEstado.ruleset.rendirse &&
@@ -351,8 +390,17 @@ function bjResolver(rendido) {
   bjClasicoGuardar();
 
   c.fase = "resuelto";
-  bjClasicoRender();
-  bjMostrarResultado(c.banca - c.bancaInicioMano);
+  // El estado ya está resuelto (banca, stats, resultados por mano), pero el BANNER
+  // no aparece hasta que la oculta del dealer (y, si ha jugado, sus robos) termine
+  // de revelarse: si no, el "¡Ganas!" delataría el resultado antes de ver las
+  // cartas. `animando` bloquea "Siguiente mano" mientras tanto.
+  c.animando = true;
+  const esperaMs = bjClasicoRender();
+  bjTrasAnimacion(esperaMs, () => {
+    c.animando = false;
+    bjActualizarControles(); // reactiva "Siguiente mano"
+    bjMostrarResultado(c.banca - c.bancaInicioMano);
+  });
 }
 
 // Actualiza las estadísticas persistentes: cada mano jugada cuenta por separado
@@ -419,13 +467,21 @@ function bjReiniciarBanca() {
 //  Pintado de la mesa
 // ============================================================
 
-// Repinta toda la mesa según el estado actual.
+// Repinta toda la mesa según el estado actual. Devuelve los ms que faltan para que
+// termine de revelarse la última carta animada (del dealer o de la mano del
+// jugador; solo uno de los dos cambia en cada llamada) — 0 si ninguna. Lo usan
+// bjPedir/bjDoblar/bjActivarMano/bjResolver para saber cuándo avanzar el turno o
+// mostrar el resultado sin adelantarlo (bjTrasAnimacion).
 function bjClasicoRender() {
   bjActualizarCabecera();
-  bjRenderDealer();
-  bjActualizarTotalDealer();
-  bjRenderManosJugador();
+  const esperaDealerMs = bjRenderDealer();
+  // El total del dealer no se actualiza hasta que termina de revelarse su última
+  // carta (si no, delataría el resultado antes de verla): con esperaDealerMs=0 esto
+  // se resuelve en el siguiente tick, sin pausa perceptible.
+  bjTrasAnimacion(esperaDealerMs, bjActualizarTotalDealer);
+  const esperaManosMs = bjRenderManosJugador();
   bjActualizarControles();
+  return Math.max(esperaDealerMs, esperaManosMs);
 }
 
 // Cabecera: banca y cartas restantes del mazo.
@@ -444,9 +500,10 @@ function bjCrearCartaImg(carta, oculta) {
 
 // Pinta la mano del dealer (su 2.ª carta boca abajo mientras dealerOculta), con el
 // reparto y el revelado escalonados en volteo (Fase 9.1: js/blackjack/animaciones.js
-// solo anima lo que cambió desde el último repintado).
+// solo anima lo que cambió desde el último repintado). Devuelve los ms que faltan
+// para que la última carta revelada termine su volteo (0 si no se animó ninguna).
 function bjRenderDealer() {
-  bjRenderDealerAnimado("bj-cartas-dealer", bjClasico.manoDealer, bjClasico.dealerOculta, "clasico");
+  return bjRenderDealerAnimado("bj-cartas-dealer", bjClasico.manoDealer, bjClasico.dealerOculta, "clasico");
 }
 
 // Total del dealer: solo la carta visible mientras tenga una oculta (así el
@@ -463,13 +520,25 @@ function bjActualizarTotalDealer() {
   }
 }
 
+// Pinta el total de una mano hasta la carta `hasta` (mano.cartas.length para verla
+// entera): compartido por el pintado inmediato y por el diferido tras el volteo.
+function bjPintarTotalMano(el, cartas) {
+  el.className = "bj-total" + (bjEsBust(cartas) ? " bj-total-bust" : "");
+  el.textContent = bjValorMano(cartas);
+}
+
 // Pinta la(s) mano(s) del jugador. Al dividir, se ven dos manos y se resalta la
-// activa; cada mano muestra su total y (al dividir) su apuesta y su resultado.
+// activa; cada mano muestra su total y (al dividir) su apuesta y su resultado. El
+// total se congela en el valor de ANTES de la carta que acaba de entrar mientras esa
+// carta gira, y salta al valor real cuando termina de revelarse (bjTrasAnimacion):
+// así nunca delata un bust antes de verlo. Devuelve los ms que faltan para que la
+// última carta revelada termine su volteo (0 si ninguna mano ha animado nada).
 function bjRenderManosJugador() {
   const c = bjClasico;
   const cont = document.getElementById("bj-manos-jugador");
   cont.innerHTML = "";
   const split = c.manos.length > 1;
+  let esperaTotalMs = 0;
 
   c.manos.forEach((mano, indice) => {
     const bloque = document.createElement("div");
@@ -479,18 +548,25 @@ function bjRenderManosJugador() {
 
     const cartas = document.createElement("div");
     cartas.className = "bj-cartas";
+    // Cuántas cartas se veían YA antes de este repintado: si la nueva se anima con
+    // volteo, el total se queda en este número hasta que termine de revelarse.
+    const cartasYaVisibles = mano.mostradas || 0;
     // Reparto inicial con entrada simple; cada carta pedida/doblada después, con
     // volteo reverso→frente. bjPintarCartasMano lleva la cuenta (mano.mostradas).
-    bjPintarCartasMano(cartas, mano);
+    const esperaMs = bjPintarCartasMano(cartas, mano);
     bloque.appendChild(cartas);
 
     const info = document.createElement("div");
     info.className = "bj-mano-info";
 
     const total = document.createElement("span");
-    total.className = "bj-total" + (bjEsBust(mano.cartas) ? " bj-total-bust" : "");
-    total.textContent = bjValorMano(mano.cartas);
+    const hastaInicial = esperaMs > 0 ? cartasYaVisibles : mano.cartas.length;
+    bjPintarTotalMano(total, mano.cartas.slice(0, hastaInicial));
     info.appendChild(total);
+    if (esperaMs > 0) {
+      esperaTotalMs = Math.max(esperaTotalMs, esperaMs);
+      bjTrasAnimacion(esperaMs, () => bjPintarTotalMano(total, mano.cartas));
+    }
 
     if (split) {
       const apuesta = document.createElement("span");
@@ -509,6 +585,8 @@ function bjRenderManosJugador() {
     bloque.appendChild(info);
     cont.appendChild(bloque);
   });
+
+  return esperaTotalMs;
 }
 
 // Muestra solo el bloque de controles de la fase actual y ajusta sus botones.
@@ -525,11 +603,19 @@ function bjActualizarControles() {
     document.getElementById("bj-seguro-coste").textContent = bjFormatearFichas(c.apuesta / 2);
   } else if (c.fase === "jugando") {
     document.getElementById("bj-zona-acciones").hidden = false;
+    // Pedir/plantarse no tienen un bjPuede…() propio (siempre valen en "jugando"):
+    // aquí es donde se cortan mientras una carta está girando.
+    document.getElementById("bj-btn-pedir").disabled = c.animando;
+    document.getElementById("bj-btn-plantarse").disabled = c.animando;
     document.getElementById("bj-btn-doblar").disabled = !bjPuedeDoblar();
     document.getElementById("bj-btn-dividir").disabled = !bjPuedeDividir();
     document.getElementById("bj-btn-rendirse").disabled = !bjPuedeRendirse();
   } else if (c.fase === "resuelto") {
     document.getElementById("bj-zona-siguiente").hidden = false;
+    // El dealer puede seguir revelándose/robando cuando la fase ya es "resuelto"
+    // (bjResolver la pone así antes de esperar el volteo): sin esto se podría pulsar
+    // "Siguiente mano" y saltarse el resultado a medio enseñar.
+    document.getElementById("bj-btn-siguiente-mano").disabled = c.animando;
   }
 }
 

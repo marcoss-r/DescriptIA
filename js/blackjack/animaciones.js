@@ -24,6 +24,15 @@
 const BJ_REVERSO_ENTRA_MS = 240;  // el reverso aparece antes de empezar a voltearse
 const BJ_VOLTEO_MS = 520;         // duración del volteo (reverso → canto → frente)
 const BJ_VOLTEO_ESCALON_MS = 300; // retardo entre cartas repartidas/reveladas en cascada
+const BJ_PAUSA_LECTURA_MS = 450;  // margen extra tras el volteo para poder leer la carta
+
+// Espera a que termine el volteo en curso (más una pausa de lectura) y entonces
+// ejecuta `cb`. `ms` es lo que devuelven bjPintarCartasMano/bjRenderDealerAnimado:
+// 0 cuando ese repintado no ha animado ninguna carta (nada que leer, así que no se
+// añade la pausa y `cb` se ejecuta en el siguiente tick).
+function bjTrasAnimacion(ms, cb) {
+  setTimeout(cb, ms > 0 ? ms + BJ_PAUSA_LECTURA_MS : 0);
+}
 
 // Crea el <img> de una carta que ENTRA mostrando primero el REVERSO (aparece junto a
 // las demás) y, tras la pausa de entrada, se voltea para enseñar su frente. Si la
@@ -74,9 +83,14 @@ function bjProgramarVolteo(img, carta, retardoMs) {
 // repinta la mano entera (que es lo que hacen las mesas en cada acción del jugador).
 // `estaOculta(idx)` (opcional) marca qué cartas se pintan BOCA ABAJO (la Luna del
 // Arcade reparte la 2.ª carta del jugador tapada): esas enseñan el reverso siempre.
+// Devuelve los milisegundos que faltan para que la ÚLTIMA carta pintada con volteo
+// termine de revelarse (0 si en este repintado no se ha animado ninguna: reparto
+// inicial, cartas ya vistas, o todas ocultas). Lo usa el llamador para saber cuánto
+// esperar antes de actualizar el total o avanzar de pantalla (ver bjTrasAnimacion).
 function bjPintarCartasMano(contenedor, mano, estaOculta) {
   const yaMostradas = mano.mostradas || 0;
   const esPrimeraVez = yaMostradas === 0;
+  let esperaMs = 0;
   mano.cartas.forEach((carta, idx) => {
     const oculta = estaOculta ? estaOculta(idx) : false;
     if (idx < yaMostradas) {
@@ -86,12 +100,15 @@ function bjPintarCartasMano(contenedor, mano, estaOculta) {
     } else if (esPrimeraVez) {
       contenedor.appendChild(bjCrearCartaImg(carta, oculta)); // reparto inicial: entrada simple
     } else {
-      contenedor.appendChild(
-        bjCrearCartaVolteada(carta, oculta, (idx - yaMostradas) * BJ_VOLTEO_ESCALON_MS)
-      );
+      const retardo = (idx - yaMostradas) * BJ_VOLTEO_ESCALON_MS;
+      contenedor.appendChild(bjCrearCartaVolteada(carta, oculta, retardo));
+      // Solo cuenta el tiempo de las que se REVELAN: una oculta (Luna, Loco a
+      // ciegas) se queda de reverso, así que no hay nada que esperar a que se vea.
+      if (!oculta) esperaMs = Math.max(esperaMs, retardo + BJ_REVERSO_ENTRA_MS + BJ_VOLTEO_MS);
     }
   });
   mano.mostradas = mano.cartas.length;
+  return esperaMs;
 }
 
 // Pinta la mano del dealer en `contenedorId`, animando SOLO lo que cambió desde el
@@ -102,15 +119,28 @@ function bjPintarCartasMano(contenedor, mano, estaOculta) {
 // con reparto escalonado.
 const BJ_ESTADO_DEALER_ANIMADO = {};
 
+// Devuelve los milisegundos que faltan para que la última carta revelada en este
+// repintado termine su volteo (0 si no se ha animado ninguna revelación), igual que
+// bjPintarCartasMano: lo usa el llamador para saber cuándo puede pintar el total del
+// dealer y avanzar el turno sin adelantar el resultado (bjTrasAnimacion).
 function bjRenderDealerAnimado(contenedorId, mano, oculta, clave) {
   const cont = document.getElementById(contenedorId);
   const previo = BJ_ESTADO_DEALER_ANIMADO[clave];
+  let esperaMs = 0;
+
+  // Pinta una carta con volteo y, si no queda tapada, apunta cuándo termina de
+  // revelarse (el máximo de todas: la última en la cascada es la que manda).
+  const pintar = (carta, tapada, retardo) => {
+    cont.appendChild(bjCrearCartaVolteada(carta, tapada, retardo));
+    if (!tapada) esperaMs = Math.max(esperaMs, retardo + BJ_REVERSO_ENTRA_MS + BJ_VOLTEO_MS);
+  };
 
   const repintarTodo = () => {
     cont.innerHTML = "";
+    esperaMs = 0;
     mano.forEach((carta, indice) => {
       const tapada = oculta && indice === mano.length - 1;
-      cont.appendChild(bjCrearCartaVolteada(carta, tapada, indice * BJ_VOLTEO_ESCALON_MS));
+      pintar(carta, tapada, indice * BJ_VOLTEO_ESCALON_MS);
     });
   };
 
@@ -127,10 +157,11 @@ function bjRenderDealerAnimado(contenedorId, mano, oculta, clave) {
     let retardo = 0;
     if (imgOculta) {
       bjVoltearCartaEnSitio(imgOculta, cartaOculta, 0);
+      esperaMs = Math.max(esperaMs, BJ_VOLTEO_MS); // el volteo en el sitio no lleva entrada de reverso
       retardo = BJ_VOLTEO_MS; // esperar a que termine el volteo antes de repartir más
     }
     for (let i = previo.len; i < mano.length; i++) {
-      cont.appendChild(bjCrearCartaVolteada(mano[i], false, retardo));
+      pintar(mano[i], false, retardo);
       retardo += BJ_VOLTEO_ESCALON_MS;
     }
   } else if (mano.length > previo.len) {
@@ -138,7 +169,7 @@ function bjRenderDealerAnimado(contenedorId, mano, oculta, clave) {
     let retardo = 0;
     for (let i = previo.len; i < mano.length; i++) {
       const tapada = oculta && i === mano.length - 1;
-      cont.appendChild(bjCrearCartaVolteada(mano[i], tapada, retardo));
+      pintar(mano[i], tapada, retardo);
       retardo += BJ_VOLTEO_ESCALON_MS;
     }
   } else {
@@ -148,6 +179,7 @@ function bjRenderDealerAnimado(contenedorId, mano, oculta, clave) {
   }
 
   BJ_ESTADO_DEALER_ANIMADO[clave] = { len: mano.length, oculta };
+  return esperaMs;
 }
 
 // Olvida el rastro de una mesa (al entrar de nuevo en el modo): así la próxima mano

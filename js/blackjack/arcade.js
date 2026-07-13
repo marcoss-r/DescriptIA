@@ -58,6 +58,10 @@ const bjArcade = {
   // Contabilidad de tragos de la ronda recién cerrada (modo fiesta), o null: la
   // calcula bjArcadeContarTragos y la pinta bjArcadeRenderFiesta.
   tragos: null,
+  // true mientras una carta está girando y su pausa de lectura no ha terminado
+  // (bjTrasAnimacion): bloquea las acciones de turno para que no se pueda pedir/
+  // doblar/etc. dos veces sobre la misma carta a medio revelar.
+  animando: false,
 };
 
 // ============================================================
@@ -534,85 +538,121 @@ function bjArcadeManoActiva() {
 }
 
 // "Pedir": roba una carta a la mano activa. Si el zapato se agota, se planta y la
-// partida terminará al acabar la ronda. Si se pasa, la mano termina.
+// partida terminará al acabar la ronda. Si se pasa, la carta se ve (con su volteo)
+// antes de avanzar de mano/jugador; mientras gira, `animando` bloquea el resto de
+// acciones para que no se pueda pedir dos veces sobre la misma carta a medio girar.
 function bjArcadePedir() {
+  const c = bjArcade;
+  if (c.animando) return;
   const mano = bjArcadeManoActiva();
   const mod = bjArcadeModActual();
   if (bjValorMano(mano.cartas, mod) >= 21) return; // con 21 ya no se pide
   if (bjArcadeDebeDoblar()) return; // el Mago (Futuro): estás obligado a doblar
-  bjArcade.eligiendo = null;
-  const carta = bjRobar(bjArcade.mazo);
+  c.eligiendo = null;
+  const carta = bjRobar(c.mazo);
   if (!carta) {
-    bjArcade.mazoAgotado = true;
+    // Sin carta que robar no hay nada que animar: se planta directamente.
+    c.mazoAgotado = true;
     mano.terminada = true;
     bjArcadeAvanzarMano();
     return;
   }
   mano.cartas.push(carta);
   bjArcadeRondaActual().espiando = false; // robar gasta la espiada de la Sacerdotisa
+
   if (bjEsBust(mano.cartas, mod)) {
-    // El Juicio: una «segunda oportunidad» puede descartar la carta del bust.
-    if (bjArcadeSegundaOportunidad(mano)) {
-      bjArcadeRenderMesa();
-      return;
-    }
-    mano.terminada = true;
-    bjArcadeAvanzarMano();
+    const jugador = bjArcadeJugadorActual();
+    const ronda = bjArcadeRondaActual();
+    // El Juicio: una «segunda oportunidad» puede descartar la carta del bust, pero
+    // solo DESPUÉS de que se haya visto (si no, el efecto no se entiende): se
+    // comprueba aquí si aplicaría, y se aplica de verdad al final de la pausa.
+    const segundaOportunidad = bjArcadeSegundaOportunidadEfecto(jugador, ronda);
+    mano.terminada = !segundaOportunidad;
+    c.animando = true;
+    const esperaMs = bjArcadeRenderMesa(); // se ve la carta del bust antes de nada
+    bjTrasAnimacion(esperaMs, () => {
+      c.animando = false;
+      if (segundaOportunidad) {
+        bjArcadeSegundaOportunidadAplicar(mano, jugador, ronda, segundaOportunidad);
+        bjArcadeRenderMesa(); // repinta ya sin la carta descartada; el turno sigue
+      } else {
+        bjArcadeAvanzarMano();
+      }
+    });
   } else {
     bjArcadeRenderMesa();
   }
 }
 
-// El Juicio: la segunda oportunidad descarta la carta con la que te acabas de
-// pasar y sigues jugando como si nada. Normal en Presente (una vez por partida y
-// jugador) o en Pasado (viniendo de perder dos rondas seguidas, una por ronda).
-// Devuelve true si la ha gastado (la carta ya está fuera de la mano).
-function bjArcadeSegundaOportunidad(mano) {
-  const jugador = bjArcadeJugadorActual();
-  const ronda = bjArcadeRondaActual();
-  if (bjTarotAplica("juicio-pr-n") && !jugador.arcanosUsados["juicio-pr-n"]) {
-    jugador.arcanosUsados["juicio-pr-n"] = true;
-    bjArcadeApuntarUso(ronda, "juicio-pr-n");
-  } else if (
+// El Juicio: ¿aplicaría la segunda oportunidad a la mano que se acaba de pasar?
+// Normal en Presente (una vez por partida y jugador) o en Pasado (viniendo de
+// perder dos rondas seguidas, una por ronda). Solo comprueba condiciones, sin
+// marcar el uso ni tocar la mano (bjArcadeSegundaOportunidadAplicar hace eso,
+// después de que la carta del bust se haya visto). Devuelve la clave del efecto
+// aplicable, o null.
+function bjArcadeSegundaOportunidadEfecto(jugador, ronda) {
+  if (bjTarotAplica("juicio-pr-n") && !jugador.arcanosUsados["juicio-pr-n"]) return "juicio-pr-n";
+  if (
     bjTarotAplica("juicio-pa-n") &&
     jugador.perdidasSeguidas >= 2 &&
     !ronda.arcanosUsados["juicio-pa-n"]
   ) {
-    ronda.arcanosUsados["juicio-pa-n"] = true;
-    bjArcadeApuntarUso(ronda, "juicio-pa-n");
-  } else {
-    return false;
+    return "juicio-pa-n";
   }
+  return null;
+}
+
+// Marca el uso del efecto y descarta la carta del bust: la mano sigue jugándose
+// como si nada. Se llama tras la pausa de lectura, cuando la carta ya se ha visto.
+function bjArcadeSegundaOportunidadAplicar(mano, jugador, ronda, efecto) {
+  if (efecto === "juicio-pr-n") jugador.arcanosUsados[efecto] = true;
+  else ronda.arcanosUsados[efecto] = true;
+  bjArcadeApuntarUso(ronda, efecto);
   mano.cartas.pop(); // la carta del bust queda fuera del juego
-  return true;
 }
 
 // "Plantarse": la mano activa queda como está. La Templanza invertida lo prohíbe
-// con menos de 14 (el botón ya va deshabilitado; esto es el cinturón).
+// con menos de 14 (el botón ya va deshabilitado; esto es el cinturón). No roba
+// carta, así que no hay nada que animar: avanza directamente.
 function bjArcadePlantarse() {
+  if (bjArcade.animando) return;
   if (!bjArcadePuedePlantarse()) return;
   bjArcade.eligiendo = null;
   bjArcadeManoActiva().terminada = true;
   bjArcadeAvanzarMano();
 }
 
-// "Doblar": paga otra apuesta sobre la mano activa, roba UNA carta y la planta.
+// "Doblar": paga otra apuesta sobre la mano activa, roba UNA carta y la planta. La
+// carta se ve (con su volteo) antes de avanzar de mano/jugador.
 function bjArcadeDoblar() {
+  const c = bjArcade;
+  if (c.animando) return;
   if (!bjArcadePuedeDoblar()) return;
-  bjArcade.eligiendo = null;
+  c.eligiendo = null;
   const mano = bjArcadeManoActiva();
   bjArcadeJugadorActual().pila -= mano.apuesta;
   mano.doblo = true;
-  const carta = bjRobar(bjArcade.mazo);
-  if (!carta) bjArcade.mazoAgotado = true;
-  else mano.cartas.push(carta);
-  bjArcadeRondaActual().espiando = false; // robar gasta la espiada de la Sacerdotisa
   mano.terminada = true;
-  bjArcadeAvanzarMano();
+  const carta = bjRobar(c.mazo);
+  if (!carta) {
+    // Sin carta que robar no hay nada que animar: se planta directamente.
+    c.mazoAgotado = true;
+    bjArcadeAvanzarMano();
+    return;
+  }
+  mano.cartas.push(carta);
+  bjArcadeRondaActual().espiando = false; // robar gasta la espiada de la Sacerdotisa
+  c.animando = true;
+  const esperaMs = bjArcadeRenderMesa();
+  bjTrasAnimacion(esperaMs, () => {
+    c.animando = false;
+    bjArcadeAvanzarMano();
+  });
 }
 
 // "Dividir" (split): separa un par en dos manos con su apuesta (máximo dos manos).
 function bjArcadeDividir() {
+  if (bjArcade.animando) return;
   if (!bjArcadePuedeDividir()) return;
   bjArcade.eligiendo = null;
   const ronda = bjArcadeRondaActual();
@@ -628,7 +668,9 @@ function bjArcadeDividir() {
 }
 
 // "Rendirse": abandona la mano; se le devuelve media apuesta al resolver la ronda.
+// No roba carta, así que no hay nada que animar.
 function bjArcadeRendirse() {
+  if (bjArcade.animando) return;
   if (!bjArcadePuedeRendirse()) return;
   bjArcade.eligiendo = null;
   const mano = bjArcadeManoActiva();
@@ -650,15 +692,22 @@ function bjArcadeAvanzarMano() {
 }
 
 // Activa la mano `i`: si tiene una sola carta (recién dividida), le reparte la 2.ª;
-// los ases divididos reciben una carta y se plantan solos.
+// los ases divididos reciben una carta y se plantan solos. Al ser mano nueva
+// (mostradas=0), sus dos cartas entran con la animación simple si el jugador sigue
+// jugándola (se ve de sobra sin pausa); pero los ases divididos se plantan SOLOS sin
+// que el jugador toque nada, así que aquí sí hace falta esperar a que se vea la 2.ª
+// carta antes de avanzar (si no, "pasa el móvil" saltaría sin enseñarla nunca).
 function bjArcadeActivarMano(i) {
+  const c = bjArcade;
   const ronda = bjArcadeRondaActual();
   ronda.manoActiva = i;
   const mano = ronda.manos[i];
-  if (mano.cartas.length === 1) {
-    const carta = bjRobar(bjArcade.mazo);
+  const repartida = mano.cartas.length === 1;
+  if (repartida) {
+    const carta = bjRobar(c.mazo);
     if (!carta) {
-      bjArcade.mazoAgotado = true;
+      // Sin carta que robar no hay nada que animar: se planta directamente.
+      c.mazoAgotado = true;
       mano.terminada = true;
       bjArcadeAvanzarMano();
       return;
@@ -667,7 +716,16 @@ function bjArcadeActivarMano(i) {
   }
   if (mano.deAses) {
     mano.terminada = true;
-    bjArcadeAvanzarMano();
+    if (repartida) {
+      c.animando = true;
+      const esperaMs = bjArcadeRenderMesa(); // se ve la 2.ª carta antes de plantarse sola
+      bjTrasAnimacion(esperaMs, () => {
+        c.animando = false;
+        bjArcadeAvanzarMano();
+      });
+    } else {
+      bjArcadeAvanzarMano();
+    }
   } else {
     bjArcadeRenderMesa();
   }
@@ -717,6 +775,7 @@ function bjArcadeDebeDoblar() {
 // Plantarse: la Muerte y la Templanza invertidas ponen suelos a lo que puedes dejar
 // en la mesa (te obligan a seguir pidiendo).
 function bjArcadePuedePlantarse() {
+  if (bjArcade.animando) return false; // una carta está girando: nada es jugable todavía
   const mano = bjArcadeManoActiva();
   const total = bjValorMano(mano.cartas, bjArcadeModActual());
   const inicial = mano.cartas.length <= 2;
@@ -737,6 +796,7 @@ function bjArcadePuedePlantarse() {
 // qué totales), el Mago (lo prohíbe) y el Emperador invertido (el último siempre puede).
 function bjArcadePuedeDoblar() {
   const c = bjArcade;
+  if (c.animando) return false; // una carta está girando: nada es jugable todavía
   const mano = bjArcadeManoActiva();
   const jugador = bjArcadeJugadorActual();
 
@@ -770,6 +830,7 @@ function bjArcadePuedeDoblar() {
 }
 
 function bjArcadePuedeDividir() {
+  if (bjArcade.animando) return false; // una carta está girando: nada es jugable todavía
   const ronda = bjArcadeRondaActual();
   // En multijugador no se permite dividir, para no añadir complejidad al torneo.
   if (bjArcade.jugadores.length > 1) return false;
@@ -787,6 +848,7 @@ function bjArcadePuedeDividir() {
 // ¿Puede rendirse? El Colgado abre o cierra la puerta, el Emperador normal se la
 // cierra al líder y el Colgado invertido (Pasado) a quien viene de ganar.
 function bjArcadePuedeRendirse() {
+  if (bjArcade.animando) return false; // una carta está girando: nada es jugable todavía
   const ronda = bjArcadeRondaActual();
   const jugador = bjArcadeJugadorActual();
 
@@ -1929,17 +1991,23 @@ function bjArcadeRenderMesa() {
     : veOculta ? bjValorMano(c.manoDealer) : bjValorMano([c.manoDealer[0]]);
 
   bjArcadeRenderMesaJugadores();
-  bjArcadeRenderManos();
+  // El total de la mano activa se refresca al terminar el volteo, no antes (ver
+  // bjArcadeRenderManos): esta espera es la que usan bjArcadePedir/Doblar/
+  // ActivarMano para saber cuándo avanzar de turno sin adelantar el resultado.
+  const esperaMs = bjArcadeRenderManos();
   bjArcadeRenderEspeciales();
   bjArcadeRenderProxima();
 
   document.getElementById("bj-arcade-btn-pedir").disabled =
+    bjArcade.animando ||
     bjValorMano(bjArcadeManoActiva().cartas, bjArcadeModActual()) >= 21 ||
     bjArcadeDebeDoblar();
   document.getElementById("bj-arcade-btn-plantarse").disabled = !bjArcadePuedePlantarse();
   document.getElementById("bj-arcade-btn-doblar").disabled = !bjArcadePuedeDoblar();
   document.getElementById("bj-arcade-btn-dividir").disabled = !bjArcadePuedeDividir();
   document.getElementById("bj-arcade-btn-rendirse").disabled = !bjArcadePuedeRendirse();
+
+  return esperaMs;
 }
 
 // Mesa compartida (Fase 9.2): barra scrolleable con el RESTO de jugadores de la
@@ -2042,6 +2110,12 @@ function bjArcadeRenderMesaJugadores() {
 function bjArcadeRenderEspeciales() {
   const cont = document.getElementById("bj-arcade-especiales");
   cont.innerHTML = "";
+  // Mientras una carta está girando no hay acciones especiales disponibles: usarlas
+  // a medio volteo (cambiar una carta, tentar al Diablo…) rompería la secuencia.
+  if (bjArcade.animando) {
+    cont.hidden = true;
+    return;
+  }
   const ctx = bjArcadeCtx();
 
   BJ_ARCADE_ESPECIALES.forEach((entrada) => {
@@ -2116,9 +2190,32 @@ function bjArcadeRenderProxima() {
   cont.hidden = false;
 }
 
+// Pinta el total de una mano hasta la carta `hasta` (mano.cartas.length para verla
+// entera): compartido por el pintado inmediato y por el diferido tras el volteo, así
+// que ambos calculan el total exactamente igual (bjArcadeRenderManos).
+function bjArcadePintarTotalMano(el, mano, mod, tapada, hasta) {
+  const cartas = mano.cartas.slice(0, hasta);
+  if (mano.aCiegas) {
+    el.className = "bj-total";
+    el.textContent = "?";
+  } else if (tapada) {
+    el.className = "bj-total";
+    el.textContent = bjArcadeTotalConTapada(cartas, mod);
+  } else {
+    el.className = "bj-total" + (bjEsBust(cartas, mod) ? " bj-total-bust" : "");
+    el.textContent = bjValorMano(cartas, mod);
+  }
+}
+
 // Pinta la(s) mano(s) del jugador de turno (una, o dos al dividir). La Luna tapa la
 // 2.ª carta (se pinta el reverso y el total lleva "+?"); las cartas que cuentan 0
 // (la Rueda invertida) se atenúan con .bj-carta-cero para que se vean de un vistazo.
+// El total de cada mano se congela en el valor que tenía ANTES de la carta que
+// acaba de entrar mientras esa carta gira, y salta al valor real cuando termina de
+// revelarse (bjTrasAnimacion): así nunca delata un bust antes de verlo. Devuelve
+// los ms que faltan para que la última carta revelada termine su volteo (0 si
+// ninguna mano ha animado nada), que es lo que esperan bjArcadePedir/Doblar/
+// ActivarMano antes de avanzar de turno.
 function bjArcadeRenderManos() {
   const ronda = bjArcadeRondaActual();
   const cont = document.getElementById("bj-arcade-manos");
@@ -2128,6 +2225,7 @@ function bjArcadeRenderManos() {
   // Con la 2.ª tapada no hay split posible, así que la carta oculta es siempre la
   // cartas[1] de la única mano.
   const tapada = bjArcadeSegundaTapada(bjArcadeIndiceActual());
+  let esperaTotalMs = 0;
 
   ronda.manos.forEach((mano, indice) => {
     const bloque = document.createElement("div");
@@ -2137,12 +2235,15 @@ function bjArcadeRenderManos() {
 
     const cartas = document.createElement("div");
     cartas.className = "bj-cartas";
+    // Cuántas cartas se veían YA antes de este repintado: si la nueva se anima con
+    // volteo, el total se queda en este número hasta que termine de revelarse.
+    const cartasYaVisibles = mano.mostradas || 0;
     // Reparto inicial con entrada simple; cada carta pedida/doblada después, con
     // volteo reverso→frente (bjPintarCartasMano lleva la cuenta en mano.mostradas).
     // Una mano a ciegas (el Loco invertido) va entera boca abajo; con la Luna solo
     // se tapa la 2.ª carta.
     const ocultas = mano.aCiegas ? () => true : tapada ? (idx) => idx === 1 : null;
-    bjPintarCartasMano(cartas, mano, ocultas);
+    const esperaMs = bjPintarCartasMano(cartas, mano, ocultas);
     if (mod && mod.valorCero && !mano.aCiegas) {
       Array.from(cartas.children).forEach((img, idx) => {
         // La tapada no se señala aunque cuente 0: delataría qué carta es.
@@ -2174,17 +2275,13 @@ function bjArcadeRenderManos() {
     const info = document.createElement("div");
     info.className = "bj-mano-info";
     const total = document.createElement("span");
-    if (mano.aCiegas) {
-      total.className = "bj-total";
-      total.textContent = "?";
-    } else if (tapada) {
-      total.className = "bj-total";
-      total.textContent = bjArcadeTotalConTapada(mano.cartas, mod);
-    } else {
-      total.className = "bj-total" + (bjEsBust(mano.cartas, mod) ? " bj-total-bust" : "");
-      total.textContent = bjValorMano(mano.cartas, mod);
-    }
+    const hastaInicial = esperaMs > 0 ? cartasYaVisibles : mano.cartas.length;
+    bjArcadePintarTotalMano(total, mano, mod, tapada, hastaInicial);
     info.appendChild(total);
+    if (esperaMs > 0) {
+      esperaTotalMs = Math.max(esperaTotalMs, esperaMs);
+      bjTrasAnimacion(esperaMs, () => bjArcadePintarTotalMano(total, mano, mod, tapada, mano.cartas.length));
+    }
     if (split) {
       const apuesta = document.createElement("span");
       apuesta.className = "bj-mano-apuesta";
@@ -2194,6 +2291,8 @@ function bjArcadeRenderManos() {
     bloque.appendChild(info);
     cont.appendChild(bloque);
   });
+
+  return esperaTotalMs;
 }
 
 // Pinta la resolución de la ronda: dealer + una fila por jugador con sus manos,
