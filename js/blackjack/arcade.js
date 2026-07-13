@@ -17,9 +17,10 @@
 // se logró. Nº de mazos NO configurable: 1–2 jugadores, 1 baraja (+1 si hace
 // falta); 3–5 jugadores, 2 barajas (+2 si hacen falta). Ver bjArcadeIniciarRonda.
 //
-// El tarot (Fase 7) y la capa de tragos del modo fiesta (Fase 8) se enganchan aquí
-// más adelante; en la Fase 6 el interruptor de modo fiesta se guarda pero aún no
-// añade tragos. Reutiliza helpers globales del Clásico (bjCrearCartaImg,
+// Modo fiesta 🍻: al cerrar cada ronda se cuentan los tragos que bebe y reparte cada
+// jugador, sumando las reglas base de la mesa y los arcanos de la tirada que hayan
+// disparado de verdad esa ronda (ver «Contabilidad de tragos» al final del archivo).
+// Reutiliza helpers globales del Clásico (bjCrearCartaImg,
 // bjFormatearFichas, bjClaseResultado, BJ_TEXTO_RESULTADO_CORTO), el motor y el
 // volteo compartido de js/blackjack/animaciones.js (bjCrearCartaVolteada).
 
@@ -54,6 +55,9 @@ const bjArcade = {
   apuestaMax: BJ_APUESTA_MIN,
   // Por jugador y ronda: { apuesta, manos, manoActiva, pilaInicio, cartasIniciales }
   jugadoresRonda: [],
+  // Contabilidad de tragos de la ronda recién cerrada (modo fiesta), o null: la
+  // calcula bjArcadeContarTragos y la pinta bjArcadeRenderFiesta.
+  tragos: null,
 };
 
 // ============================================================
@@ -319,6 +323,10 @@ function bjArcadeIniciarRonda() {
           ? cartasIniciales[Math.floor(Math.random() * 2)]
           : null,
       arcanosUsados: {}, // acciones especiales de una vez POR RONDA ya gastadas
+      // Acciones especiales que el jugador ha usado ESTA ronda (cuente o no como
+      // «una vez por partida»): lo lee la contabilidad de tragos del modo fiesta,
+      // que necesita saber si el arcano disparó en esta ronda concreta.
+      usos: {},
     };
   });
   // El orden de juego cambia (aleatorio) en cada ronda; `turnoIndex` recorre este
@@ -564,12 +572,14 @@ function bjArcadeSegundaOportunidad(mano) {
   const ronda = bjArcadeRondaActual();
   if (bjTarotAplica("juicio-pr-n") && !jugador.arcanosUsados["juicio-pr-n"]) {
     jugador.arcanosUsados["juicio-pr-n"] = true;
+    bjArcadeApuntarUso(ronda, "juicio-pr-n");
   } else if (
     bjTarotAplica("juicio-pa-n") &&
     jugador.perdidasSeguidas >= 2 &&
     !ronda.arcanosUsados["juicio-pa-n"]
   ) {
     ronda.arcanosUsados["juicio-pa-n"] = true;
+    bjArcadeApuntarUso(ronda, "juicio-pa-n");
   } else {
     return false;
   }
@@ -833,6 +843,13 @@ function bjArcadeCtx() {
     ronda: bjArcadeRondaActual(),
     mano: bjArcadeManoActiva(),
   };
+}
+
+// Apunta que el jugador ha usado ESTE efecto en la ronda en curso. `arcanosUsados`
+// solo dice si el uso está gastado (y el de «una vez por partida» sobrevive a la
+// ronda), así que la contabilidad de tragos necesita este rastro aparte.
+function bjArcadeApuntarUso(ronda, efecto) {
+  ronda.usos[efecto] = (ronda.usos[efecto] || 0) + 1;
 }
 
 // ¿Puede usarse esta acción especial ahora mismo?
@@ -1210,6 +1227,7 @@ function bjArcadeResolverRonda() {
   c.ocultaEraVisible =
     !c.dealerOculta || bjTarotAplica("ermitano-pr-n") || bjTarotAplica("ermitano-fu-n");
   c.dealerOculta = false;
+  c.magoDealerCambio = false; // ¿ha cambiado el dealer una carta ESTA ronda? (Mago inv.)
   const opciones = bjTarotOpcionesMotor();
 
   // La Torre en posición Pasado retoca el límite del dealer SOLO en esta ronda:
@@ -1236,6 +1254,7 @@ function bjArcadeResolverRonda() {
           if (bjValorCarta(carta.valor) < bjValorCarta(c.manoDealer[peor].valor)) peor = idx;
         });
         c.manoDealer[peor] = nueva;
+        c.magoDealerCambio = true;
         bjJugarDealer(c.manoDealer, c.mazo, opciones); // por si el cambio lo deja corto
       }
     }
@@ -1270,6 +1289,11 @@ function bjArcadeResolverRonda() {
       mano.resultado = res.resultado;
     });
   });
+
+  // Los tragos se cuentan AQUÍ, antes de los ajustes de ronda: muchos arcanos leen
+  // el rastro de la ronda ANTERIOR (ganoPrevio, racha, blackjacksPrevios…) y
+  // bjArcadeAjustesDeRonda lo pisa con el de esta.
+  c.tragos = c.config.fiesta ? bjArcadeContarTragos() : null;
 
   bjArcadeAjustesDeRonda();
   bjArcadeRenderRonda();
@@ -2061,6 +2085,7 @@ function bjArcadeRenderEspeciales() {
       bjArcade.eligiendo = null; // otra acción cancela el modo «elige una carta»
       if (entrada.unaVez === "partida") ahora.jugador.arcanosUsados[entrada.efecto] = true;
       if (entrada.unaVez === "ronda") ahora.ronda.arcanosUsados[entrada.efecto] = true;
+      bjArcadeApuntarUso(ahora.ronda, entrada.efecto);
       entrada.usar(ahora); // repinta la mesa o avanza el turno, según el efecto
     });
 
@@ -2139,6 +2164,7 @@ function bjArcadeRenderManos() {
           bjArcade.eligiendo = null;
           if (eligiendo.unaVez === "partida") ctx.jugador.arcanosUsados[eligiendo.efecto] = true;
           if (eligiendo.unaVez === "ronda") ctx.ronda.arcanosUsados[eligiendo.efecto] = true;
+          bjArcadeApuntarUso(ctx.ronda, eligiendo.efecto);
           bjArcadeCambiarCarta(ctx, idx);
         });
       });
@@ -2229,12 +2255,381 @@ function bjArcadeRenderRonda() {
     c.mazoAgotado || c.ronda >= c.rondasTotal ? "Ver resultados" : "Siguiente ronda";
 }
 
-// Capa de modo fiesta 🍻 (Fase 8): pinta las consecuencias de tragos bajo la
-// resolución de la ronda, solo si el modo está activado. Junta las reglas base
-// (§7, calculadas de los resultados) con los recordatorios de los arcanos [F]
-// activos (su línea `fiesta` viaja en bjEstado.tarot desde la tirada).
+// ============================================================
+//  Modo fiesta 🍻: contabilidad de tragos de la ronda
+// ============================================================
+//
+// Al cerrar la ronda se cuenta, POR JUGADOR, cuántos tragos bebe y cuántos reparte.
+// El saldo sale de dos fuentes:
+//   1. Las reglas base de la mesa (blackjack, bust, deuda…), siempre activas.
+//   2. Los arcanos de la tirada que llevan línea `fiesta` (data/blackjack/tarot.js)
+//      Y que han disparado DE VERDAD esta ronda: cada uno tiene su detector en
+//      BJ_ARCADE_TRAGOS, que mira los hechos de la ronda. Un arcano que no ha
+//      disparado no aparece.
+//
+// Se calcula en bjArcadeResolverRonda ANTES de bjArcadeAjustesDeRonda, porque
+// muchos detectores leen el rastro de la ronda anterior (ganoPrevio, racha,
+// blackjacksPrevios…) que los ajustes están a punto de pisar.
+
+// ¿«Resucitó» alguna mano? (la Muerte normal: un bust que el mod convierte en ≤21).
+// Se compara el total con y sin el transformarTotal del mod.
+function bjArcadeResucito(ronda, mod) {
+  if (!mod || !mod.transformarTotal) return false;
+  const crudo = Object.assign({}, mod);
+  delete crudo.transformarTotal;
+  return ronda.manos.some(
+    (mano) => bjValorMano(mano.cartas, crudo) > 21 && bjValorMano(mano.cartas, mod) <= 21
+  );
+}
+
+// ¿Contó algún as por su valor más alto? (la Estrella: el as a 12). Se fuerza el as
+// a ese valor y se compara: si el total no cambia, es que el as no se rebajó.
+function bjArcadeUsoAsAlto(ronda, mod, valor) {
+  if (!mod || !mod.valoresAs || mod.valoresAs[0] !== valor) return false;
+  const alto = Object.assign({}, mod, { valoresAs: [valor] });
+  return ronda.manos.some(
+    (mano) =>
+      mano.cartas.some((carta) => carta.valor === "A") &&
+      !bjEsBust(mano.cartas, mod) &&
+      bjValorMano(mano.cartas, mod) === bjValorMano(mano.cartas, alto)
+  );
+}
+
+// Hechos de la ronda que consultan los detectores. `mesa` son los de la mesa entera
+// y `jugadores[i]` los de cada jugador. Los campos que empiezan por «previo»/«racha»
+// son el rastro de la ronda ANTERIOR (aún sin pisar).
+function bjArcadeHechosRonda() {
+  const c = bjArcade;
+  const totalDealer = bjValorMano(c.manoDealer);
+  const deltas = c.jugadores.map((jugador, i) => jugador.pila - c.jugadoresRonda[i].pilaInicio);
+
+  const mesa = {
+    deltas,
+    dealerNatural: bjEsBlackjackNatural(c.manoDealer),
+    dealerSePaso: totalDealer > 21,
+    totalDealer,
+    dealerArraso: deltas.every((delta) => delta < 0),
+    todosGanaron: deltas.every((delta) => delta > 0),
+    multRonda: c.multRonda,
+    magoDealerCambio: !!c.magoDealerCambio,
+    // El Carro invertido (Presente): la mínima sube si alguien encadena 2 victorias.
+    // La racha aún no se ha incrementado, así que se mira la de antes + la de ahora.
+    subeLaMinima: c.jugadores.some((jugador, i) => deltas[i] > 0 && jugador.racha >= 1),
+  };
+
+  // Máximo de empates de la partida (la Justicia de Futuro premia/castiga a quien
+  // más lleve). El empate de ESTA ronda aún no está contado en jugador.empates.
+  const empatesTotales = c.jugadores.map((jugador, i) =>
+    jugador.empates + (c.jugadoresRonda[i].manos.some((mano) => mano.resultado === "empate") ? 1 : 0)
+  );
+  const maxEmpates = Math.max.apply(null, empatesTotales);
+
+  mesa.jugadores = c.jugadores.map((jugador, i) => {
+    const ronda = c.jugadoresRonda[i];
+    const mod = bjArcadeMod(i);
+    const manos = ronda.manos;
+    const natural = manos.length === 1 && bjEsBlackjackNatural(manos[0].cartas, mod);
+
+    return {
+      indice: i,
+      jugador,
+      ronda,
+      mod,
+      nombre: jugador.nombre,
+      gano: deltas[i] > 0,
+      perdio: deltas[i] < 0,
+      sePaso: manos.some((mano) => bjEsBust(mano.cartas, mod)),
+      doblo: manos.some((mano) => mano.doblo),
+      dividio: manos.length > 1,
+      seRindio: manos.some((mano) => mano.rendido),
+      // «Usó regla opcional» = dividió, dobló o se rindió (lo mira el Hierofante).
+      usoOpcional: manos.length > 1 || manos.some((mano) => mano.doblo || mano.rendido),
+      natural,
+      naturalGanador: natural && manos[0].resultado === "jugador",
+      veintiunos: manos.filter(
+        (mano) => bjValorMano(mano.cartas, mod) === 21 && !bjEsBlackjackNatural(mano.cartas, mod)
+      ).length,
+      resucito: bjArcadeResucito(ronda, mod),
+      tieneAs: manos.some((mano) => mano.cartas.some((carta) => carta.valor === "A")),
+      asA12: bjArcadeUsoAsAlto(ronda, mod, 12),
+      // Empate NUMÉRICO: tu total igualó al del dealer. Quién se lo lleva depende de
+      // la Justicia (Presente), así que el hecho se guarda aparte del resultado.
+      empatoEnNumeros: manos.some(
+        (mano) =>
+          !mano.rendido &&
+          !bjEsBust(mano.cartas, mod) &&
+          !mesa.dealerSePaso &&
+          bjValorMano(mano.cartas, mod) === totalDealer
+      ),
+      cartaCero: !!ronda.cartaCero || (c.valoresCero.length > 0 &&
+        manos.some((mano) => mano.cartas.some((carta) => c.valoresCero.indexOf(carta.valor) !== -1))),
+      mult: ronda.mult || 1,
+      usos: ronda.usos,
+      // Puesto ANTES de la ronda (por pilaInicio: la apuesta ya descontada
+      // castigaría a quien apostó fuerte).
+      liderInicio: bjArcadePuestoInicio(i, true),
+      ultimoInicio: bjArcadePuestoInicio(i, false),
+      lider: bjArcadeEsLider(jugador),
+      primeroEnOrden: c.orden[0] === i,
+      apuesta: ronda.apuesta,
+      pilaInicio: ronda.pilaInicio,
+      maxEmpates: empatesTotales[i] === maxEmpates && maxEmpates > 0,
+      cobroPorElLider:
+        !!ronda.liderApostado && ronda.liderApostado.some((li) => deltas[li] > 0),
+    };
+  });
+
+  return mesa;
+}
+
+// Detector de cada arcano con línea `fiesta`: dado el jugador (p) y la mesa (m),
+// devuelve { bebe } / { reparte } si el efecto le ha tocado ESTA ronda, o nada.
+// Las claves "-fu-" solo se consultan en la última ronda (bjTarotAplica lo filtra).
+const BJ_ARCADE_TRAGOS = {
+  // --- El Loco ---
+  "loco-pa-n": (p) => p.gano && bjArcadeManoInicialIntacta(p.ronda) && { reparte: 1 },
+  "loco-pa-i": (p) => p.sePaso && { bebe: 1 },
+  "loco-pr-n": (p) => p.usos["loco-pr-n"] && { bebe: 1 },
+  "loco-pr-i": (p) => p.usos["loco-pr-i"] && { bebe: 2 },
+  "loco-fu-n": (p) => p.usos["loco-fu-n"] && { bebe: 1 },
+  "loco-fu-i": () => ({ bebe: 1 }), // en la última ronda le toca a todo el mundo
+
+  // --- El Mago ---
+  "mago-pa-n": (p) => p.usos["mago-pa-n"] && { bebe: 1 },
+  "mago-pa-i": (p, m) => m.dealerNatural && { bebe: 1 },
+  "mago-pr-n": (p) => p.usos["mago-pr-n"] && { bebe: 1 },
+  "mago-pr-i": (p, m) => m.magoDealerCambio && { bebe: 1 },
+  "mago-fu-n": (p) => !p.doblo && !p.natural && { bebe: 2 },
+
+  // --- La Sacerdotisa ---
+  "sacerdotisa-pa-n": (p) => p.usos["sacerdotisa-pa-n"] && { bebe: 1 },
+  "sacerdotisa-pa-i": (p) => p.sePaso && { bebe: 1 },
+  "sacerdotisa-fu-n": () => ({ bebe: 1 }),
+  "sacerdotisa-fu-i": () => ({ bebe: 1 }),
+
+  // --- La Emperatriz ---
+  "emperatriz-pa-n": (p) => p.naturalGanador && p.jugador.blackjacksPrevios > 0 && { reparte: 2 },
+  "emperatriz-pa-i": (p) => p.sePaso && { bebe: 1 },
+  "emperatriz-pr-i": (p) => p.apuesta === 10 && { bebe: 1 }, // apuesta topada
+  "emperatriz-fu-i": (p) => p.natural && { bebe: 2 },
+
+  // --- El Emperador ---
+  "emperador-pa-n": (p) => p.lider && { reparte: 1 },
+  "emperador-pa-i": (p) => p.ultimoInicio && p.gano && { reparte: 2 },
+  "emperador-pr-i": (p) => p.ultimoInicio && p.doblo && { bebe: 1 },
+  "emperador-fu-n": (p) => p.liderInicio && p.gano && { reparte: 2 },
+  "emperador-fu-i": (p) => p.ultimoInicio && p.gano && { reparte: 2 },
+
+  // --- El Hierofante ---
+  "hierofante-pa-n": (p) => p.gano && !p.usoOpcional && { reparte: 1 },
+  "hierofante-pa-i": (p) => p.gano && p.usoOpcional && { reparte: 1 },
+  "hierofante-pr-i": (p) => p.usoOpcional && { bebe: 1 },
+  "hierofante-fu-i": (p) => p.usoOpcional && { bebe: 1 },
+
+  // --- Los Enamorados ---
+  "enamorados-pa-n": (p) => p.usos["enamorados-pa-n"] && { bebe: 1 },
+  "enamorados-pa-i": (p) => p.jugador.racha >= 2 && { bebe: 1 }, // le tocó doblar apuesta
+  "enamorados-pr-n": (p) => p.usos["enamorados-pr-n"] && { bebe: 1 },
+  "enamorados-pr-i": () => ({ bebe: 1 }), // a todos les cambian una carta a ciegas
+  "enamorados-fu-n": (p) => p.usos["enamorados-fu-n"] && { bebe: 1 },
+  "enamorados-fu-i": () => ({ bebe: 1 }),
+
+  // --- El Carro ---
+  "carro-pa-n": (p) => p.gano && p.jugador.racha >= 1 && { reparte: 1 }, // racha de 2+
+  "carro-pa-i": (p) => p.jugador.ganoPrevio && { bebe: 1 },              // le subió la mínima
+  "carro-pr-n": (p) => p.cobroPorElLider && { reparte: 1 },
+  "carro-pr-i": (p, m) => m.subeLaMinima && { bebe: 1 },
+  "carro-fu-n": (p) => p.jugador.racha >= 1 && { reparte: 2 },
+  "carro-fu-i": (p) => bjArcadeLideraVictorias(p.jugador) && { reparte: 2 },
+
+  // --- La Fuerza ---
+  "fuerza-pa-n": (p) => p.doblo && p.gano && { reparte: 1 },
+  "fuerza-pa-i": (p) => p.doblo && p.perdio && { bebe: 2 },
+  "fuerza-pr-n": (p) =>
+    p.ronda.manos.some((mano) => mano.doblo && mano.cartas.length >= 4) && { bebe: 1 },
+  "fuerza-fu-n": (p) => p.doblo && p.perdio && { bebe: 2 },
+
+  // --- El Ermitaño ---
+  "ermitano-pa-n": (p) => p.ultimoInicio && { bebe: 1 },   // el último ve la oculta
+  "ermitano-pa-i": (p) => p.primeroEnOrden && { bebe: 1 }, // el primero juega a ciegas
+  "ermitano-pr-n": () => ({ bebe: 1 }),
+  "ermitano-pr-i": () => ({ bebe: 1 }),
+  "ermitano-fu-n": () => ({ bebe: 1 }),
+  "ermitano-fu-i": () => ({ bebe: 1 }),
+
+  // --- La Rueda de la Fortuna ---
+  "rueda-pa-n": (p) => p.gano && p.jugador.multRueda > 1 && { reparte: 1 },
+  "rueda-pa-i": (p) => p.cartaCero && { bebe: 1 },
+  "rueda-pr-n": (p, m) => p.gano && m.multRonda >= 2 && { reparte: 1 },
+  "rueda-pr-i": (p) => p.cartaCero && { bebe: 1 },
+  "rueda-fu-n": (p, m) => p.gano && m.multRonda >= 3 && { reparte: 2 },
+  "rueda-fu-i": (p) => p.cartaCero && { bebe: 1 },
+
+  // --- La Justicia ---
+  "justicia-pa-n": (p) => p.gano && p.jugador.empatoPrevio && { reparte: 1 },
+  "justicia-pa-i": (p) => p.gano && p.jugador.empatoPrevio && { bebe: 1 },
+  "justicia-pr-n": (p) => p.empatoEnNumeros && { reparte: 1 }, // el empate te lo llevas tú
+  "justicia-pr-i": (p) => p.empatoEnNumeros && { bebe: 1 },    // …o se lo lleva el dealer
+  "justicia-fu-n": (p) => p.maxEmpates && { reparte: 2 },
+  "justicia-fu-i": (p) => p.maxEmpates && { bebe: 2 },
+
+  // --- El Colgado ---
+  "colgado-pa-n": (p) => p.perdio && { bebe: 1 }, // recuperas el 10 % de lo perdido
+  "colgado-pa-i": (p) => p.jugador.ganoPrevio && { bebe: 1 }, // no podías rendirte
+  "colgado-pr-n": (p) =>
+    p.ronda.manos.some((mano) => mano.rendido && mano.cartas.length > 2) && { bebe: 1 },
+  "colgado-fu-n": (p) =>
+    p.ronda.manos.some((mano) => mano.rendido && mano.cartas.length > 2) && { bebe: 1 },
+
+  // --- La Muerte ---
+  "muerte-pa-n": (p) => p.sePaso && { bebe: 1 },
+  "muerte-pa-i": (p) => p.sePaso && { bebe: 1 },
+  "muerte-pr-n": (p) => p.resucito && { reparte: 2 },
+  "muerte-pr-i": (p) => p.sePaso && { bebe: 1 },
+  "muerte-fu-n": (p) => p.resucito && { reparte: 1 },
+  "muerte-fu-i": (p) => p.sePaso && { bebe: 2 },
+
+  // --- La Templanza ---
+  "templanza-pa-n": (p) =>
+    p.gano &&
+    p.ronda.manos.some((mano) => !bjEsBust(mano.cartas, p.mod) && mano.cartas.length >= 4) && {
+      reparte: 1,
+    },
+  "templanza-pa-i": (p) =>
+    p.ronda.manos.some(
+      (mano) => !mano.rendido && !bjEsBust(mano.cartas, p.mod) && mano.cartas.length === 2
+    ) && { bebe: 1 },
+  "templanza-pr-n": (p) =>
+    p.ronda.manos.some(
+      (mano) => mano.resultado === "jugador" && mano.cartas.length >= 5
+    ) && { reparte: 2 },
+  "templanza-pr-i": (p) => p.sePaso && { bebe: 1 },
+  "templanza-fu-n": (p) =>
+    p.ronda.manos.some(
+      (mano) => mano.resultado === "jugador" && mano.cartas.length >= 4
+    ) && { reparte: 2 },
+  "templanza-fu-i": (p) => p.sePaso && { bebe: 1 },
+
+  // --- El Diablo ---
+  "diablo-pa-n": (p) => p.doblo && p.gano && p.jugador.dobloYGano && { reparte: 1 },
+  "diablo-pa-i": (p) => p.perdio && { bebe: 1 },
+  "diablo-pr-n": (p) => p.ronda.manos.some((mano) => mano.diablo) && { reparte: 2 },
+  "diablo-pr-i": (p) => p.perdio && { bebe: 1 },
+  "diablo-fu-n": (p) => p.doblo && { reparte: 1 },
+  "diablo-fu-i": (p) => p.perdio && { bebe: 2 },
+
+  // --- La Torre ---
+  "torre-pa-n": (p, m) => m.dealerArraso && { bebe: 1 },
+  "torre-pa-i": (p) => p.veintiunos > 0 && { bebe: 1 }, // tu 21 enfureció al dealer
+  "torre-pr-n": (p) => p.gano && { reparte: 1 },
+  "torre-pr-i": (p) => p.perdio && !p.sePaso && { bebe: 1 }, // caíste ante el dealer
+  "torre-fu-n": (p) => p.gano && { reparte: 1 },
+  "torre-fu-i": (p) => p.perdio && !p.sePaso && { bebe: 1 },
+
+  // --- La Estrella ---
+  "estrella-pa-n": (p) => p.jugador.perdidasSeguidas > 0 && p.tieneAs && { reparte: 1 },
+  "estrella-pa-i": (p) => p.jugador.ganoPrevio && p.tieneAs && { bebe: 1 },
+  "estrella-pr-n": (p) => p.asA12 && { reparte: 1 },
+  "estrella-pr-i": (p) => p.tieneAs && { bebe: 1 },
+  "estrella-fu-n": (p) => p.asA12 && { reparte: 1 },
+  "estrella-fu-i": (p) => p.tieneAs && { bebe: 2 },
+
+  // --- La Luna ---
+  "luna-pa-n": (p) => p.gano && p.jugador.ganoACiegas && { reparte: 1 },
+  "luna-pa-i": (p) => p.jugador.perdidasSeguidas > 0 && { bebe: 1 }, // jugaste a ciegas
+  "luna-pr-n": (p) => p.gano && { reparte: 2 },
+  "luna-pr-i": () => ({ bebe: 1 }),
+  "luna-fu-n": (p) => p.gano && { reparte: 2 },
+  "luna-fu-i": () => ({ bebe: 1 }),
+
+  // --- El Sol ---
+  "sol-pa-n": (p, m) => m.todosGanaron && { reparte: 1 },
+  "sol-pa-i": (p, m) => m.dealerArraso && { bebe: 1 },
+  "sol-pr-i": (p, m) => m.dealerNatural && { bebe: 1 },
+  "sol-fu-i": (p, m) => m.dealerArraso && { bebe: 2 },
+
+  // --- El Juicio ---
+  "juicio-pa-n": (p) => p.usos["juicio-pa-n"] && { reparte: 1 },
+  "juicio-pa-i": (p) => p.mult > 1 && { reparte: 1 },
+  "juicio-pr-n": (p) => p.usos["juicio-pr-n"] && { bebe: 1 },
+  "juicio-pr-i": (p) => p.mult > 1 && { reparte: 1 },
+  "juicio-fu-n": (p) => p.gano && { reparte: 2 },
+  "juicio-fu-i": (p) => p.pilaInicio > 0 && p.apuesta >= Math.ceil(p.pilaInicio / 2) && { bebe: 1 },
+
+  // --- El Mundo ---
+  "mundo-pa-n": (p) => p.veintiunos > 0 && { reparte: p.veintiunos },
+  "mundo-pa-i": (p) => p.natural && { bebe: 1 },
+  "mundo-pr-n": (p) => p.veintiunos > 0 && { reparte: 2 * p.veintiunos },
+  "mundo-pr-i": (p) => p.natural && { reparte: 1 },
+  "mundo-fu-n": (p) => p.veintiunos > 0 && { reparte: p.veintiunos },
+  "mundo-fu-i": (p) => p.natural && { bebe: 1 },
+};
+
+// Reglas base del modo fiesta (§7): las que no dependen del tarot. Devuelve los
+// apuntes de tragos de un jugador.
+function bjArcadeApuntesBase(p, m) {
+  const apuntes = [];
+  if (p.naturalGanador) apuntes.push({ texto: "Blackjack natural.", reparte: 3 });
+  if (p.sePaso) apuntes.push({ texto: "Se pasó.", bebe: 1 });
+  if (m.dealerNatural && p.perdio) {
+    apuntes.push({ texto: "Cayó ante el blackjack del dealer.", bebe: 1 });
+  }
+  if (m.hayUltimo && p.jugador.pila === m.minPila) {
+    apuntes.push({ texto: "Cierra el ranking.", bebe: 1 });
+  }
+  if (p.jugador.pila < 0) apuntes.push({ texto: "Está en deuda.", bebe: 1 });
+  return apuntes;
+}
+
+// Apuntes de tragos que le meten al jugador los arcanos de la tirada: solo los que
+// llevan línea `fiesta`, aplican ahora y cuyo detector dice que han disparado.
+function bjArcadeApuntesTarot(p, m) {
+  const apuntes = [];
+  bjEstado.tarot.forEach((arcano) => {
+    if (!arcano.fiesta || !bjTarotAplica(arcano.efecto)) return;
+    const detector = BJ_ARCADE_TRAGOS[arcano.efecto];
+    if (!detector) return;
+    const saldo = detector(p, m);
+    if (!saldo) return;
+    apuntes.push({
+      texto: arcano.fiesta,
+      arcano: arcano.nombre + (arcano.invertida ? " (invertida)" : ""),
+      bebe: saldo.bebe,
+      reparte: saldo.reparte,
+    });
+  });
+  return apuntes;
+}
+
+// Contabilidad completa de la ronda: por cada jugador con algún trago, su saldo
+// (bebe / reparte) y el desglose de por qué. Los jugadores que se salvan no salen.
+function bjArcadeContarTragos() {
+  const m = bjArcadeHechosRonda();
+
+  // «Último del ranking» (regla base): solo con 2+ jugadores y si no van todos
+  // igualados (si no, serían todos los últimos a la vez y beberían todos).
+  const pilas = bjArcade.jugadores.map((jugador) => jugador.pila);
+  m.minPila = Math.min.apply(null, pilas);
+  m.hayUltimo = bjArcade.jugadores.length > 1 && m.minPila !== Math.max.apply(null, pilas);
+
+  return m.jugadores
+    .map((p) => {
+      const apuntes = bjArcadeApuntesBase(p, m).concat(bjArcadeApuntesTarot(p, m));
+      return {
+        nombre: p.nombre,
+        apuntes,
+        bebe: apuntes.reduce((suma, apunte) => suma + (apunte.bebe || 0), 0),
+        reparte: apuntes.reduce((suma, apunte) => suma + (apunte.reparte || 0), 0),
+      };
+    })
+    .filter((saldo) => saldo.apuntes.length > 0);
+}
+
+// Pinta la contabilidad de tragos bajo la resolución de la ronda (solo con el modo
+// fiesta activo): una ficha por jugador con su saldo y el desglose de cada apunte.
 function bjArcadeRenderFiesta() {
   const seccion = document.getElementById("bj-ronda-fiesta");
+  const tragos = bjArcade.tragos;
   if (!bjArcade.config.fiesta) {
     seccion.hidden = true;
     return;
@@ -2243,66 +2638,59 @@ function bjArcadeRenderFiesta() {
   const lista = document.getElementById("bj-ronda-fiesta-lista");
   lista.innerHTML = "";
 
-  bjArcadeTragosDeRonda().forEach((texto) => {
-    lista.appendChild(bjArcadeCrearTrago(texto, "bj-fiesta-item"));
-  });
-
-  // Recordatorios de los arcanos con capa de fiesta activos en la mesa: se aplican
-  // de palabra (algunos son reglas manuales o de temporización), así que solo se
-  // muestran como recordatorio con su nombre.
-  bjEstado.tarot
-    .filter((arcano) => arcano.fiesta)
-    .forEach((arcano) => {
-      const nombre = arcano.nombre + (arcano.invertida ? " (invertida)" : "");
-      lista.appendChild(bjArcadeCrearTrago(`🔮 ${nombre}: ${arcano.fiesta}`, "bj-fiesta-item bj-fiesta-arcano"));
-    });
-
-  if (!lista.children.length) {
-    lista.appendChild(bjArcadeCrearTrago("Esta ronda se salva todo el mundo… por ahora.", "bj-fiesta-item bj-fiesta-vacio"));
+  if (!tragos || !tragos.length) {
+    const vacio = document.createElement("li");
+    vacio.className = "bj-fiesta-vacio";
+    vacio.textContent = "Esta ronda se salva todo el mundo… por ahora.";
+    lista.appendChild(vacio);
+  } else {
+    tragos.forEach((saldo) => lista.appendChild(bjArcadeCrearFichaTragos(saldo)));
   }
 
   seccion.hidden = false;
 }
 
-function bjArcadeCrearTrago(texto, clase) {
-  const li = document.createElement("li");
-  li.className = clase;
-  li.textContent = texto;
-  return li;
+// Ficha de tragos de un jugador: cabecera con el saldo (bebe / reparte) y la lista
+// de apuntes que lo justifican (los del tarot llevan el nombre del arcano).
+function bjArcadeCrearFichaTragos(saldo) {
+  const item = document.createElement("li");
+  item.className = "bj-fiesta-jugador";
+
+  const cabecera = document.createElement("div");
+  cabecera.className = "bj-fiesta-cabecera";
+
+  const nombre = document.createElement("span");
+  nombre.className = "bj-fiesta-nombre";
+  nombre.textContent = saldo.nombre;
+  cabecera.appendChild(nombre);
+
+  const marcador = document.createElement("span");
+  marcador.className = "bj-fiesta-saldo";
+  if (saldo.bebe) marcador.appendChild(bjArcadeCrearSaldo(`🍺 bebe ${saldo.bebe}`, "bj-fiesta-bebe"));
+  if (saldo.reparte) {
+    marcador.appendChild(bjArcadeCrearSaldo(`🥂 reparte ${saldo.reparte}`, "bj-fiesta-reparte"));
+  }
+  cabecera.appendChild(marcador);
+  item.appendChild(cabecera);
+
+  const motivos = document.createElement("ul");
+  motivos.className = "bj-fiesta-motivos";
+  saldo.apuntes.forEach((apunte) => {
+    const motivo = document.createElement("li");
+    motivo.className = apunte.arcano ? "bj-fiesta-motivo bj-fiesta-arcano" : "bj-fiesta-motivo";
+    motivo.textContent = apunte.arcano ? `🔮 ${apunte.arcano}: ${apunte.texto}` : apunte.texto;
+    motivos.appendChild(motivo);
+  });
+  item.appendChild(motivos);
+
+  return item;
 }
 
-// Reglas base del modo fiesta (§7) calculadas de los resultados de la ronda.
-// Devuelve una lista de frases ya con el nombre de cada jugador.
-function bjArcadeTragosDeRonda() {
-  const c = bjArcade;
-  const frases = [];
-  const dealerNatural = bjEsBlackjackNatural(c.manoDealer);
-
-  // «Último del ranking»: solo tiene sentido con 2+ jugadores y si no van todos
-  // igualados (si no, serían todos los últimos a la vez y beberían todos).
-  const pilas = c.jugadores.map((j) => j.pila);
-  const minPila = Math.min.apply(null, pilas);
-  const hayUltimo = c.jugadores.length > 1 && minPila !== Math.max.apply(null, pilas);
-
-  c.jugadoresRonda.forEach((ronda, i) => {
-    const jugador = c.jugadores[i];
-    const nombre = jugador.nombre;
-    const delta = jugador.pila - ronda.pilaInicio;
-    const mod = bjArcadeMod(i);
-    const sePaso = ronda.manos.some((mano) => bjEsBust(mano.cartas, mod));
-    const natural =
-      ronda.manos.length === 1 &&
-      ronda.manos[0].resultado === "jugador" &&
-      bjEsBlackjackNatural(ronda.manos[0].cartas, mod);
-
-    if (natural) frases.push(`${nombre} hizo blackjack natural: reparte 3 tragos.`);
-    if (sePaso) frases.push(`${nombre} se pasó: bebe 1 trago.`);
-    if (dealerNatural && delta < 0) frases.push(`${nombre} cayó ante el blackjack del dealer: bebe 1 trago.`);
-    if (hayUltimo && jugador.pila === minPila) frases.push(`${nombre} cierra el ranking: bebe 1 trago.`);
-    if (jugador.pila < 0) frases.push(`${nombre} está en deuda: bebe 1 trago.`);
-  });
-
-  return frases;
+function bjArcadeCrearSaldo(texto, clase) {
+  const span = document.createElement("span");
+  span.className = clase;
+  span.textContent = texto;
+  return span;
 }
 
 // Resumen textual de las manos de un jugador: "18✓ · 22✗" (total + símbolo).

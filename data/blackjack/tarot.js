@@ -21,6 +21,13 @@
 //     - fiesta: consecuencia de tragos cuando el efecto TE TOCA en una ronda. Solo
 //       se usa con el modo fiesta 🍻: se suma al saldo de tragos del final de la
 //       ronda (arcade.js), aparte de los tragos base (deuda, perder, blackjack…).
+//       CAMPO OPCIONAL: no todos los efectos llevan fiesta. Solo se añade cuando
+//       hay un suceso propio de ESE efecto que el código puede detectar sin
+//       ambigüedad a partir del estado de la ronda (una carta robada, una acción
+//       usada, una condición cumplida…). Nunca depende de la intención del
+//       jugador ("si querías doblar y no pudiste", "si perdiste la cuenta"): eso
+//       no es contabilizable. Tampoco se repite un efecto ya cubierto igual por
+//       las reglas base (bjArcadeTragosDeRonda).
 //     - soloMulti: el efecto depende del RANKING de jugadores (líder, último, robar
 //       fichas a los demás), así que en solitario no haría nada. La tirada lo excluye
 //       del pool cuando se juega solo (bjTarotTirada), para no malgastar una carta.
@@ -58,7 +65,7 @@ const BJ_TAROT = [
       },
       futuro: {
         normal: { efecto: "mago-fu-n", texto: "En la última ronda, todos deben doblar salvo que saquen blackjack.", fiesta: "Quien no doble, bebe 2 tragos." },
-        invertida: { efecto: "mago-fu-i", texto: "En la última ronda, nadie puede doblar.", fiesta: "Quien intente doblar, bebe 1 trago." },
+        invertida: { efecto: "mago-fu-i", texto: "En la última ronda, nadie puede doblar." },
       },
     },
   },
@@ -70,11 +77,11 @@ const BJ_TAROT = [
         invertida: { efecto: "sacerdotisa-pa-i", texto: "Cada vez que un jugador se pasa, el contador de cartas se oculta durante la ronda siguiente.", fiesta: "Quien se pase, bebe 1 trago." },
       },
       presente: {
-        normal: { efecto: "sacerdotisa-pr-n", texto: "El contador de cartas muestra además cuántos ases quedan.", fiesta: "Quien saque un as, bebe 1 trago." },
-        invertida: { efecto: "sacerdotisa-pr-i", texto: "El contador de cartas permanece oculto toda la partida.", fiesta: "Si pierdes la cuenta, bebe 1 trago." },
+        normal: { efecto: "sacerdotisa-pr-n", texto: "El contador de cartas muestra además cuántos ases quedan." },
+        invertida: { efecto: "sacerdotisa-pr-i", texto: "El contador de cartas permanece oculto toda la partida." },
       },
       futuro: {
-        normal: { efecto: "sacerdotisa-fu-n", texto: "En la última ronda, todos ven la carta superior del mazo antes de decidir.", fiesta: "Quien mire la carta superior, bebe 1 trago." },
+        normal: { efecto: "sacerdotisa-fu-n", texto: "En la última ronda, todos ven la carta superior del mazo antes de decidir.", fiesta: "Todos beben 1 trago." },
         invertida: { efecto: "sacerdotisa-fu-i", texto: "En la última ronda, el contador de cartas permanece oculto.", fiesta: "Bebéis todos 1 trago a ciegas." },
       },
     },
@@ -87,11 +94,11 @@ const BJ_TAROT = [
         invertida: { efecto: "emperatriz-pa-i", texto: "Tras pasarse, el blackjack natural de ese jugador paga ×1,25 en vez de ×1,5.", fiesta: "Quien se pase, bebe 1 trago." },
       },
       presente: {
-        normal: { efecto: "emperatriz-pr-n", texto: "El blackjack natural paga ×2 toda la partida.", fiesta: "Quien haga blackjack natural reparte 3 tragos." },
+        normal: { efecto: "emperatriz-pr-n", texto: "El blackjack natural paga ×2 toda la partida." },
         invertida: { efecto: "emperatriz-pr-i", texto: "La apuesta máxima queda limitada a 10.", fiesta: "Quien tope su apuesta, bebe 1 trago." },
       },
       futuro: {
-        normal: { efecto: "emperatriz-fu-n", texto: "En la última ronda, el blackjack natural paga ×3.", fiesta: "Quien haga blackjack reparte 3 tragos." },
+        normal: { efecto: "emperatriz-fu-n", texto: "En la última ronda, el blackjack natural paga ×3." },
         invertida: { efecto: "emperatriz-fu-i", texto: "En la última ronda, un blackjack natural reduce a la mitad las fichas del jugador.", fiesta: "Quien haga blackjack, bebe 2 tragos por la ironía." },
       },
     },
@@ -104,7 +111,7 @@ const BJ_TAROT = [
         invertida: { efecto: "emperador-pa-i", soloMulti: true, texto: "Si el último del ranking gana la ronda siguiente, cobra ×2.", fiesta: "Si el último gana, reparte 2 tragos." },
       },
       presente: {
-        normal: { efecto: "emperador-pr-n", soloMulti: true, texto: "Quien vaya líder no puede rendirse.", fiesta: "Si el líder quiere rendirse, bebe 1 trago." },
+        normal: { efecto: "emperador-pr-n", soloMulti: true, texto: "Quien vaya líder no puede rendirse." },
         invertida: { efecto: "emperador-pr-i", soloMulti: true, texto: "El último del ranking siempre puede doblar, aunque no esté permitido.", fiesta: "Cuando el último doble, bebe 1 trago." },
       },
       futuro: {
@@ -121,11 +128,11 @@ const BJ_TAROT = [
         invertida: { efecto: "hierofante-pa-i", texto: "Quien gane tras doblar o dividir gana +3 fichas.", fiesta: "Quien gane tras doblar o dividir reparte 1 trago." },
       },
       presente: {
-        normal: { efecto: "hierofante-pr-n", texto: "Se desactivan todas las reglas opcionales: solo pedir y plantarse.", fiesta: "Quien eche de menos una regla opcional, bebe 1 trago." },
+        normal: { efecto: "hierofante-pr-n", texto: "Se desactivan todas las reglas opcionales: solo pedir y plantarse." },
         invertida: { efecto: "hierofante-pr-i", texto: "Se activan todas las reglas opcionales menos dividir.", fiesta: "Quien use una regla opcional, bebe 1 trago." },
       },
       futuro: {
-        normal: { efecto: "hierofante-fu-n", texto: "En la última ronda se desactivan todas las reglas opcionales.", fiesta: "Quien quiera una regla opcional y no pueda, bebe 1 trago." },
+        normal: { efecto: "hierofante-fu-n", texto: "En la última ronda se desactivan todas las reglas opcionales." },
         invertida: { efecto: "hierofante-fu-i", texto: "En la última ronda se activan todas las reglas opcionales excepto dividir.", fiesta: "Quien use una regla opcional, bebe 1 trago." },
       },
     },
@@ -160,7 +167,7 @@ const BJ_TAROT = [
       },
       futuro: {
         normal: { efecto: "carro-fu-n", texto: "Quien llegue en racha de victorias a la última ronda cobra ×2.", fiesta: "Quien llegue en racha reparte 2 tragos." },
-        invertida: { efecto: "carro-fu-i", soloMulti: true, texto: "En la última ronda, quien más victorias lleve debe apostar el doble de la apuesta máxima.", fiesta: "Quien deba apostar el doble brinda con todos." },
+        invertida: { efecto: "carro-fu-i", soloMulti: true, texto: "En la última ronda, quien más victorias lleve debe apostar el doble de la apuesta máxima.", fiesta: "Quien deba apostar el doble, reparte 2 tragos." },
       },
     },
   },
@@ -173,11 +180,11 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "fuerza-pr-n", texto: "Se puede doblar con cualquier número de cartas, toda la partida.", fiesta: "Quien doble con 3 o más cartas, bebe 1 trago." },
-        invertida: { efecto: "fuerza-pr-i", texto: "Solo se puede doblar con 9, 10 u 11.", fiesta: "Quien quiera doblar y no pueda, bebe 1 trago." },
+        invertida: { efecto: "fuerza-pr-i", texto: "Solo se puede doblar con 9, 10 u 11." },
       },
       futuro: {
-        normal: { efecto: "fuerza-fu-n", texto: "En la última ronda, quien doble cobra ×1,1 si gana o ×0,9 si pierde.", fiesta: "Quien doble en la última ronda, bebe 1 trago." },
-        invertida: { efecto: "fuerza-fu-i", texto: "En la última ronda, solo se puede doblar con 9, 10 u 11.", fiesta: "Quien quiera doblar y no pueda, bebe 1 trago." },
+        normal: { efecto: "fuerza-fu-n", texto: "En la última ronda, quien doble cobra ×1,1 si gana o ×0,9 si pierde.", fiesta: "Quien doble y pierda, bebe 2 tragos." },
+        invertida: { efecto: "fuerza-fu-i", texto: "En la última ronda, solo se puede doblar con 9, 10 u 11." },
       },
     },
   },
@@ -189,7 +196,7 @@ const BJ_TAROT = [
         invertida: { efecto: "ermitano-pa-i", soloMulti: true, texto: "En cada ronda, quien vaya primero no ve la carta visible del dealer hasta plantarse.", fiesta: "Quien juegue a ciegas, bebe 1 trago." },
       },
       presente: {
-        normal: { efecto: "ermitano-pr-n", texto: "La carta oculta del dealer está visible toda la partida.", fiesta: "Quien mire la oculta, bebe 1 trago." },
+        normal: { efecto: "ermitano-pr-n", texto: "La carta oculta del dealer está visible toda la partida.", fiesta: "Todos beben 1 trago." },
         invertida: { efecto: "ermitano-pr-i", texto: "La carta visible del dealer permanece oculta toda la partida.", fiesta: "Todos beben 1 trago a oscuras." },
       },
       futuro: {
@@ -206,12 +213,12 @@ const BJ_TAROT = [
         invertida: { efecto: "rueda-pa-i", texto: "Tras perder una ronda, una carta inicial al azar del jugador vale 0 la ronda siguiente.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
       },
       presente: {
-        normal: { efecto: "rueda-pr-n", texto: "Al empezar cada ronda se sortea un multiplicador ×0,5–×3 sobre las ganancias de esa ronda.", fiesta: "Con multiplicador alto, el ganador reparte 1 trago." },
+        normal: { efecto: "rueda-pr-n", texto: "Al empezar cada ronda se sortea un multiplicador ×0,5–×3 sobre las ganancias de esa ronda.", fiesta: "Si el multiplicador de la ronda es ×2 o más, quien gane reparte 1 trago." },
         invertida: { efecto: "rueda-pr-i", texto: "Al empezar cada ronda se sortea un valor de carta que cuenta como 0 esa ronda.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
       },
       futuro: {
-        normal: { efecto: "rueda-fu-n", texto: "En la última ronda, el multiplicador sorteado puede llegar a ×5.", fiesta: "Quien cobre el multiplicador reparte 2 tragos." },
-        invertida: { efecto: "rueda-fu-i", texto: "En la última ronda, dos valores de carta al azar cuentan como 0.", fiesta: "Bebéis todos 1 trago por el caos." },
+        normal: { efecto: "rueda-fu-n", texto: "En la última ronda, el multiplicador sorteado puede llegar a ×5.", fiesta: "Si el multiplicador es ×3 o más, quien gane reparte 2 tragos." },
+        invertida: { efecto: "rueda-fu-i", texto: "En la última ronda, dos valores de carta al azar cuentan como 0.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
       },
     },
   },
@@ -241,11 +248,11 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "colgado-pr-n", texto: "Se puede rendirse incluso después de pedir carta.", fiesta: "Quien se rinda tarde, bebe 1 trago." },
-        invertida: { efecto: "colgado-pr-i", texto: "Rendirse está prohibido, aunque esté habilitado.", fiesta: "Quien quiera rendirse y no pueda, bebe 1 trago." },
+        invertida: { efecto: "colgado-pr-i", texto: "Rendirse está prohibido, aunque esté habilitado." },
       },
       futuro: {
         normal: { efecto: "colgado-fu-n", texto: "En la última ronda se puede rendirse incluso después de pedir carta.", fiesta: "Quien se rinda tarde, bebe 1 trago." },
-        invertida: { efecto: "colgado-fu-i", texto: "En la última ronda, rendirse está prohibido.", fiesta: "Quien quiera rendirse, bebe 1 trago." },
+        invertida: { efecto: "colgado-fu-i", texto: "En la última ronda, rendirse está prohibido." },
       },
     },
   },
@@ -258,7 +265,7 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "muerte-pr-n", texto: "Pasarse con 22 no pierde: cuenta como 12 y sigues jugando.", fiesta: "Quien resucite con 22 reparte 2 tragos." },
-        invertida: { efecto: "muerte-pr-i", texto: "Nadie puede plantarse con menos de 17, toda la partida.", fiesta: "Quien se pase por no poder plantarse, bebe 1 trago." },
+        invertida: { efecto: "muerte-pr-i", texto: "Nadie puede plantarse con menos de 17, toda la partida.", fiesta: "Quien se pase, bebe 1 trago." },
       },
       futuro: {
         normal: { efecto: "muerte-fu-n", texto: "En la última ronda, cualquier bust cuenta como 12.", fiesta: "Quien resucite un bust reparte 1 trago." },
@@ -275,11 +282,11 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "templanza-pr-n", texto: "Plantarse con 5 o más cartas sin pasarse paga como blackjack.", fiesta: "Quien cobre por 5 cartas reparte 2 tragos." },
-        invertida: { efecto: "templanza-pr-i", texto: "No puedes plantarte con la mano inicial.", fiesta: "Si te pasas por culpa de esta regla, bebe 1 trago." },
+        invertida: { efecto: "templanza-pr-i", texto: "No puedes plantarte con la mano inicial.", fiesta: "Quien se pase, bebe 1 trago." },
       },
       futuro: {
         normal: { efecto: "templanza-fu-n", texto: "En la última ronda, plantarse con 4 o más cartas sin pasarse paga como blackjack.", fiesta: "Quien cobre por 4 o más cartas reparte 2 tragos." },
-        invertida: { efecto: "templanza-fu-i", texto: "En la última ronda, no puedes plantarte con la mano inicial ni con menos de 16.", fiesta: "Si te pasas por culpa de esta regla, bebe 1 trago." },
+        invertida: { efecto: "templanza-fu-i", texto: "En la última ronda, no puedes plantarte con la mano inicial ni con menos de 16.", fiesta: "Quien se pase, bebe 1 trago." },
       },
     },
   },
@@ -287,7 +294,7 @@ const BJ_TAROT = [
     numeral: "XV", nombre: "El Diablo", slug: "diablo",
     posiciones: {
       pasado: {
-        normal: { efecto: "diablo-pa-n", texto: "Tras doblar y ganar, el jugador cobra ×2 extra al doblar en su ronda siguiente.", fiesta: "Quien tiente al diablo reparte 1 trago." },
+        normal: { efecto: "diablo-pa-n", texto: "Tras doblar y ganar, el jugador cobra ×2 extra al doblar en su ronda siguiente.", fiesta: "Quien cobre el bonus del Diablo, reparte 1 trago." },
         invertida: { efecto: "diablo-pa-i", soloMulti: true, texto: "Cada mano perdida entrega 2 fichas a cada ganador de la ronda, dealer incluido.", fiesta: "Los perdedores, además, beben 1 trago." },
       },
       presente: {
@@ -359,11 +366,11 @@ const BJ_TAROT = [
         invertida: { efecto: "sol-pa-i", texto: "Si el dealer gana a todos, la ronda siguiente juega con sus dos cartas ocultas.", fiesta: "Si el dealer arrasa, todos beben 1 trago." },
       },
       presente: {
-        normal: { efecto: "sol-pr-n", texto: "La carta oculta del dealer se reparte boca arriba.", fiesta: "Quien aproveche la carta vista reparte 1 trago." },
+        normal: { efecto: "sol-pr-n", texto: "La carta oculta del dealer se reparte boca arriba." },
         invertida: { efecto: "sol-pr-i", texto: "Cada blackjack del dealer quita 10 fichas a cada jugador.", fiesta: "Si el dealer hace blackjack, todos beben 1 trago." },
       },
       futuro: {
-        normal: { efecto: "sol-fu-n", texto: "En la última ronda, la carta oculta del dealer es visible desde el principio.", fiesta: "Quien gane con ventaja reparte 1 trago." },
+        normal: { efecto: "sol-fu-n", texto: "En la última ronda, la carta oculta del dealer es visible desde el principio." },
         invertida: { efecto: "sol-fu-i", texto: "Si el dealer gana a todos en la última ronda, quita 15 fichas a cada jugador.", fiesta: "Si el dealer os gana a todos, bebéis todos 2 tragos." },
       },
     },
@@ -394,7 +401,7 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "mundo-pr-n", texto: "El 21 exacto paga como blackjack.", fiesta: "Quien logre un 21 exacto reparte 2 tragos." },
-        invertida: { efecto: "mundo-pr-i", texto: "El blackjack natural paga solo ×1.", fiesta: "Cada blackjack natural, el dealer reparte 1 trago." },
+        invertida: { efecto: "mundo-pr-i", texto: "El blackjack natural paga solo ×1.", fiesta: "Quien haga blackjack natural reparte 1 trago." },
       },
       futuro: {
         normal: { efecto: "mundo-fu-n", texto: "Al final de la partida, cada 21 exacto logrado suma +15 fichas.", fiesta: "Cada 21 exacto, reparte 1 trago." },

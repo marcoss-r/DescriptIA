@@ -1932,17 +1932,63 @@ button.secundario:hover {
   flex-direction: column;
   gap: 0.4rem;
 }
-.bj-fiesta-item {
-  padding: 0.4rem 0.6rem;
+/* Ficha de un jugador: cabecera con su saldo de tragos + desglose de los apuntes. */
+.bj-fiesta-jugador {
+  padding: 0.5rem 0.6rem;
   background: var(--color-fondo-alt);
   border-radius: var(--radio-borde-chico);
-  font-size: 0.95rem;
-  line-height: 1.3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
-/* Recordatorio de un arcano [F]: se distingue de las reglas base con un filete. */
-.bj-fiesta-arcano {
-  border-left: 3px solid var(--color-acento);
+.bj-fiesta-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.bj-fiesta-nombre {
+  font-weight: 700;
+}
+.bj-fiesta-saldo {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+/* Beber y repartir se leen de un vistazo: el saldo va en chips de distinto color. */
+.bj-fiesta-bebe,
+.bj-fiesta-reparte {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bj-fiesta-bebe {
+  background: color-mix(in srgb, var(--color-fallo) 22%, transparent);
+  color: var(--color-fallo);
+}
+.bj-fiesta-reparte {
+  background: color-mix(in srgb, var(--color-exito) 22%, transparent);
+  color: var(--color-exito);
+}
+.bj-fiesta-motivos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.bj-fiesta-motivo {
+  font-size: 0.88rem;
+  line-height: 1.3;
   color: var(--color-texto-tenue);
+}
+/* Apunte que viene de un arcano: se distingue de las reglas base con un filete. */
+.bj-fiesta-arcano {
+  padding-left: 0.4rem;
+  border-left: 2px solid var(--color-acento);
 }
 .bj-fiesta-vacio {
   text-align: center;
