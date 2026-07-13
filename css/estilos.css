@@ -1570,6 +1570,13 @@ button.secundario:hover {
   animation: none;
 }
 
+/* Carta que cuenta como 0 esta ronda (la Rueda invertida): atenuada en gris para
+   distinguirla de un vistazo, en la mano propia y en la mesa compartida. */
+.bj-cartas img.bj-carta-cero,
+.bj-mesa-jug-cartas img.bj-carta-cero {
+  filter: grayscale(1) brightness(0.72);
+}
+
 /* Mano(s) del jugador: una centrada, o dos lado a lado al dividir (split). */
 .bj-manos {
   display: flex;
@@ -1701,6 +1708,62 @@ button.secundario:hover {
   background: var(--color-superficie);
   color: var(--color-texto-tenue);
   filter: none;
+}
+
+/* Acciones especiales del tarot (Fase 9.5): un botón por arcano usable AHORA,
+   con la miniatura de su carta y una etiqueta corta. Borde dorado del tarot para
+   distinguirlos de las acciones normales de blackjack. */
+.bj-especiales {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+}
+.bj-btn-especial {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.3rem 0.75rem 0.3rem 0.4rem;
+  border: 1px solid var(--color-tarot-dorado, #d4af37);
+  border-radius: 10px;
+  background: var(--color-superficie);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.bj-btn-especial img {
+  width: 24px;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 3px;
+}
+
+/* Modo «elige una carta» (el Mago / los Enamorados): las cartas pulsables laten
+   con borde dorado hasta que se toca una (o se cancela con el botón). */
+.bj-cartas img.bj-carta-elegible {
+  outline: 2px solid var(--color-tarot-dorado, #d4af37);
+  outline-offset: 2px;
+  cursor: pointer;
+  animation: bj-carta-late 700ms ease-in-out infinite alternate;
+}
+@keyframes bj-carta-late {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-4px); }
+}
+
+/* La Sacerdotisa: fila pequeña con la carta superior del mazo espiada. */
+.bj-proxima {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-texto-tenue);
+}
+.bj-proxima .bj-cartas img {
+  width: 40px;
 }
 
 /* Overlays de la mesa (estadísticas / banca rota): mismo patrón que .info-overlay,

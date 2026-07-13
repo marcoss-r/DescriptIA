@@ -645,16 +645,7 @@ que identifica de quién es el turno activo en cada momento.
     `multFijo`, `ganoACiegas`, `dobloYGano`) y banderas de mesa (`magoNoDoblar`,
     `dealerArraso`, `dealerRevelado`, `contadorOculto`, `dealerBlando`).
   - ⏳ **Pendiente (siguientes batches)**:
-    1. **Valor de carta**: La Estrella (ases a 12 / 1 / 0, las 6 variantes) y La Rueda
-       invertida (valores que cuentan 0). Necesitan un hook de valor en `motor.js`.
-    2. **Interactivos** (piden UI en el turno): El Loco (descartar mano), Los Enamorados
-       (descartar/cambiar carta), El Mago (cambiar carta; el dealer cambia la suya),
-       La Sacerdotisa (espiar el mazo), El Juicio (2.ª oportunidad tras pasarse),
-       El Diablo (tentar al diablo con 3 cartas), El Carro (apostar por el líder),
-       La Muerte (22 → 12), El Mago Futuro (doblar obligatorio), El Hierofante Futuro
-       (ruleset solo en la última ronda).
-    3. **Fin de partida**: El Mundo (Futuro), que suma/resta 15 por cada 21 o blackjack.
-    4. **Saldo de tragos del tarot**: que la línea `fiesta` de cada arcano se sume al
+    1. **Saldo de tragos del tarot**: que la línea `fiesta` de cada arcano se sume al
        recuento del final de ronda solo cuando el efecto ha disparado de verdad.
   - ✅ **Paso 6 — Solitario: pool filtrado**. Los efectos que dependen del RANKING de
     jugadores no pueden disparar con un solo jugador (los helpers `bjArcadeEsLider` /
@@ -671,6 +662,87 @@ que identifica de quién es el turno activo en cada momento.
     parecen de ranking pero miran al dealer (El Sol y La Torre de Pasado: «el dealer
     gana a todos» con un jugador es «el dealer te gana»).
   - Versiones subidas: `APP_VERSION` y `CACHE` → **4.9.10**.
+  - ✅ **Paso 7 — Batch «valor de carta» + Luna boca abajo** (2026-07-13). Reportado
+    por el usuario: la Luna solo aplicaba su ×2 (la carta no se repartía boca abajo),
+    la Estrella y la Rueda invertida no hacían nada.
+    - **Hook de valor en `motor.js`**: `bjValorMano(mano, mod)` acepta un modificador
+      opcional con `valoresAs` (escala del as de mayor a menor; el ajuste rebaja un as
+      un peldaño mientras la mano se pase) y `valorCero(carta)` (la carta cuenta 0).
+      `bjEsBust`/`bjEsBlackjackNatural` lo propagan y `bjResolverMano` acepta
+      `opciones.modJugador` (solo para la mano del jugador). Sin `mod`, cuenta
+      estándar: el Clásico y el dealer no cambian. Probado con `node` (escalas
+      [12,1], [12,11,1], [11], [1], [0], cartas a 0, ases a 0, sin regresión estándar).
+    - **La Estrella (las 6)**: `bjArcadeValoresAs` → pa-n [11] tras perder, pa-i [1]
+      tras ganar, pr-n [12,1], pr-i [1], fu-n [12,11,1], fu-i [0].
+    - **La Rueda invertida (las 3)**: `c.valoresCero` se sortea al empezar la ronda
+      (pr-i uno, fu-i dos en la última) y `cartaCero` por jugador (pa-i: tras perder,
+      una de tus 2 iniciales al azar). Las cartas a 0 se atenúan en gris
+      (`.bj-carta-cero`) en la mano propia y en la mesa compartida.
+    - **La Luna boca abajo (las 3)**: `bjArcadeSegundaTapada` (pr-n/fu-n para todos,
+      pa-i tras perder); la 2.ª carta se pinta con el reverso (hook `estaOculta` de
+      `bjPintarCartasMano`), el total enseña «N+?» (`bjArcadeTotalConTapada`), también
+      para el resto de la mesa hasta la resolución, y **dividir se bloquea** a ciegas.
+      El ×2/×2,5 que ya existía ahora sí premia jugar de verdad sin ver la carta.
+    - **El Loco normal de Pasado** (no estaba ni en pendientes): ×1,5 al ganar
+      plantándote con tu mano inicial (`bjArcadeManoInicialIntacta` en
+      `bjArcadeMultJugador`).
+    - Todo lo que condiciona la ronda se avisa en la pantalla de apuesta
+      (`bjArcadeNotasCartas`): valores a 0, carta propia a 0, ases de Pasado y
+      segunda carta boca abajo. `bjArcadeMod(i)` construye el modificador por jugador
+      y TODAS las comprobaciones de mano de jugador en `arcade.js` lo pasan (pedir,
+      plantarse, doblar, 21 de la Torre, resolución, ajustes, tragos, render).
+    - Versiones subidas: `APP_VERSION` y `CACHE` → **5.0.1**.
+  - ✅ **Paso 8 — Fase 9.5: acciones especiales del tarot (interactivos)** (2026-07-13).
+    Con esto los **132 efectos** de la tirada quedan consultados por código.
+    - **Esqueleto**: fila `#bj-arcade-especiales` bajo las acciones de la mesa; cada
+      arcano usable AHORA pinta un botón con la miniatura de su carta + etiqueta
+      (texto completo en el `title`). Registro `BJ_ARCADE_ESPECIALES` en `arcade.js`:
+      `{ efecto, etiqueta, unaVez: "partida"|"ronda", disponible(ctx), usar(ctx) }`,
+      con usos gastados en `jugador.arcanosUsados` / `jugadoresRonda[i].arcanosUsados`
+      y `bjArcadeCtx()` como contexto del jugador de turno. Las entradas con
+      `eligeCarta: true` entran en el modo «elige una carta» (ver abajo) en vez de
+      ejecutar directamente. CSS: `.bj-especiales`, `.bj-btn-especial` (borde dorado).
+    - **El Loco**: `bjArcadeLocoDescartar` (descarta la mano inicial, roba 2; con
+      `aCiegas` la mano nueva va boca abajo —flag `mano.aCiegas`, tapada también en
+      la mesa compartida— y se planta sola). Botones pr-n (1/partida), pr-i (1/partida,
+      a ciegas), fu-n (última ronda, 1/ronda); fu-i es forzoso y salta solo al apostar.
+    - **La Muerte normal**: `mod.transformarTotal` en `bjValorMano` (motor): 22→12 en
+      Presente, cualquier bust→12 en Futuro (solo jugadores; el dealer sería imbatible).
+    - **El Diablo pr-n**: botón «Tentar al diablo» con 3 cartas (1/partida): roba la
+      4.ª, marca `mano.diablo` y `bjArcadeMultJugador` aplica ×2 si la mano gana.
+    - **El Carro pr-n**: botón «Apostar por el líder» (1/ronda, multijugador): guarda
+      `ronda.liderApostado` (índices en cabeza al apostar) y los ajustes pagan +3 si
+      cualquiera de ellos ganó su mano.
+    - **La Sacerdotisa**: fila `#bj-arcade-proxima` con la carta superior del mazo.
+      La ven todos en la última ronda (fu-n) o quien gastó la espiada del botón pa-n
+      (rastro `jugador.ganoSinPedir`; `ronda.espiando` se apaga al robar carta).
+    - **El Mago**: pr-n (1/partida) y pa-n (tras blackjack, rastro `naturalPrevio`)
+      cambian una carta con el modo «elige una carta»; pr-i cambia la peor carta del
+      dealer (la más baja) una vez por partida si su mano final suma 17 (flag
+      `magoDealerUso`, re-juega el turno tras el cambio); fu-n obliga a doblar
+      (`bjArcadeDebeDoblar`: bloquea pedir/plantarse/dividir/rendirse y fuerza
+      `bjArcadePuedeDoblar`; decae sin fondos o sin cartas, y con blackjack natural).
+    - **Los Enamorados**: pr-n (1/partida) y pa-n (tras 2 derrotas, 1/ronda) cambian
+      una carta inicial; pr-i/fu-i cambian a ciegas una inicial al repartir (en
+      `bjArcadeIniciarRonda`); fu-n reparte una mano B (`ronda.cartasAlt`) y el botón
+      «Jugar la otra mano» (enseña sus cartas en miniatura) permite alternar mientras
+      la mano siga sin jugar.
+    - **El Juicio**: `bjArcadeSegundaOportunidad` en `bjArcadePedir`: al pasarte,
+      descarta la carta del bust y sigues (pr-n 1/partida; pa-n tras 2 derrotas
+      seguidas, 1/ronda). Solo aplica a cartas PEDIDAS (no al doblar: ahí la carta
+      única es el contrato).
+    - **El Hierofante Futuro**: `bjArcadeReglaActiva(clave)` sustituye las lecturas
+      directas del ruleset en doblar/dividir/rendirse (fu-n: todas fuera; fu-i:
+      todas dentro menos dividir, solo en la última ronda).
+    - **El Mundo Futuro**: `bjArcadeMundoFinal` al acabar la partida (+15 por 21
+      exacto con el contador nuevo `jugador.veintiunos`; −15 por blackjack natural
+      con `blackjacksPrevios`). Se ejecuta antes que la Justicia final.
+    - **Modo «elige una carta»** (`bjArcade.eligiendo`): el botón lo activa/cancela,
+      las cartas elegibles laten con borde dorado (`.bj-carta-elegible`; la tapada de
+      la Luna queda excluida) y al tocar una `bjArcadeCambiarCarta` la cambia por la
+      superior del mazo (puede provocar bust). El modo se limpia al hacer cualquier
+      otra acción o cambiar de turno.
+    - Versiones subidas: `APP_VERSION` y `CACHE` → **5.1.0**.
 
 
 

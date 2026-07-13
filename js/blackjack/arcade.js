@@ -43,6 +43,8 @@ const bjArcade = {
   ronda: 1,
   mazoAgotado: false,   // el zapato se quedó sin cartas: la partida termina al fin de ronda
   multRonda: 1,         // multiplicador de ganancias de la ronda (Rueda / Juicio)
+  valoresCero: [],      // valores de carta que cuentan 0 esta ronda (Rueda invertida)
+  eligiendo: null,      // modo «elige una carta» activo (Mago/Enamorados) o null
   manoDealer: [],
   dealerOculta: true,
   orden: [],            // orden de juego de la ronda (índices de jugadores, barajado)
@@ -209,6 +211,10 @@ function bjArcadeEmpezar() {
     dobloYGano: false,    // El Diablo (Pasado): doblaste y ganaste la ronda anterior
     empatoPrevio: false,  // La Justicia (Pasado): empataste la ronda anterior
     empates: 0,           // La Justicia (Futuro): empates acumulados en la partida
+    arcanosUsados: {},    // acciones especiales de una vez POR PARTIDA ya gastadas
+    ganoSinPedir: false,  // La Sacerdotisa (Pasado): ganaste sin pedir cartas
+    naturalPrevio: false, // El Mago (Pasado): hiciste blackjack la ronda anterior
+    veintiunos: 0,        // El Mundo (Futuro): cuenta de 21 exactos de la partida
   }));
 
   // Banderas de mesa que encienden los arcanos de Pasado a mitad de partida.
@@ -217,6 +223,7 @@ function bjArcadeEmpezar() {
   c.dealerRevelado = false; // El Sol normal: todos ganaron al dealer
   c.contadorOculto = false; // La Sacerdotisa invertida: alguien se pasó
   c.dealerBlando = false;   // La Torre normal: el dealer arrasó y se ablanda
+  c.magoDealerUso = false;  // El Mago invertido (Presente): su cambio de carta, gastado
   // Nº de mazos NO configurable: 1–2 jugadores empiezan con 1 baraja completa,
   // 3–5 jugadores con 2. Si el zapato se queda corto para repartir una ronda,
   // bjArcadeIniciarRonda añade el mismo nº de barajas de golpe (ver ahí).
@@ -271,13 +278,49 @@ function bjArcadeIniciarRonda() {
   if (bjTarotAplica("rueda-fu-n")) c.multRonda = bjArcadeMultRueda(true);
   if (bjTarotAplica("juicio-fu-n")) c.multRonda *= 2;
 
-  c.jugadoresRonda = c.jugadores.map((jugador) => ({
-    apuesta: 0,
-    manos: [],
-    manoActiva: 0,
-    pilaInicio: jugador.pila,
-    cartasIniciales: [bjRobar(c.mazo), bjRobar(c.mazo)],
-  }));
+  // La Rueda invertida: valores de carta que cuentan como 0 esta ronda para las
+  // manos de los jugadores. En Presente se sortea uno cada ronda; en Futuro, dos
+  // distintos en la última. (Solo hay una Rueda en la tirada: no se pisan.)
+  c.valoresCero = [];
+  if (bjTarotAplica("rueda-pr-i")) c.valoresCero = bjArcadeSortearValores(1);
+  if (bjTarotAplica("rueda-fu-i")) c.valoresCero = bjArcadeSortearValores(2);
+
+  c.jugadoresRonda = c.jugadores.map((jugador) => {
+    const cartasIniciales = [bjRobar(c.mazo), bjRobar(c.mazo)];
+
+    // Los Enamorados invertidos (Presente, o Futuro en la última ronda): al recibir
+    // la mano, una de tus dos cartas iniciales (al azar) se cambia a ciegas por la
+    // superior del mazo. La cambiada queda fuera del juego.
+    if (bjTarotAplica("enamorados-pr-i") || bjTarotAplica("enamorados-fu-i")) {
+      const nueva = bjRobar(c.mazo);
+      if (nueva) cartasIniciales[Math.floor(Math.random() * 2)] = nueva;
+    }
+
+    // Los Enamorados normal (Futuro): en la última ronda se reparte una SEGUNDA
+    // mano inicial por jugador; en su turno elige cuál de las dos juega.
+    let cartasAlt = null;
+    if (bjTarotAplica("enamorados-fu-n")) {
+      cartasAlt = [bjRobar(c.mazo), bjRobar(c.mazo)].filter((carta) => carta);
+      if (cartasAlt.length < 2) cartasAlt = null; // zapato corto: sin mano B
+    }
+
+    return {
+      apuesta: 0,
+      manos: [],
+      manoActiva: 0,
+      pilaInicio: jugador.pila,
+      cartasIniciales,
+      cartasAlt,
+      // La Rueda invertida (Pasado): tras perder una ronda, una de tus dos cartas
+      // iniciales (al azar) cuenta como 0 en esta. Se guarda la carta en sí (no el
+      // índice) para reconocerla aunque la mano crezca o se divida.
+      cartaCero:
+        bjTarotAplica("rueda-pa-i") && jugador.perdidasSeguidas > 0
+          ? cartasIniciales[Math.floor(Math.random() * 2)]
+          : null,
+      arcanosUsados: {}, // acciones especiales de una vez POR RONDA ya gastadas
+    };
+  });
   // El orden de juego cambia (aleatorio) en cada ronda; `turnoIndex` recorre este
   // array, así que quién juega ahora es c.orden[c.turnoIndex] (bjArcadeIndiceActual).
   c.orden = barajar(c.jugadores.map((_, i) => i));
@@ -289,6 +332,7 @@ function bjArcadeIniciarRonda() {
 // solitario, va directo a la apuesta (no hay a quién ocultarla).
 function bjArcadeTurnoJugador() {
   const c = bjArcade;
+  c.eligiendo = null; // el modo «elige una carta» no cruza de un turno a otro
   if (c.jugadores.length === 1) {
     bjArcadeMostrarApuesta();
     return;
@@ -363,6 +407,35 @@ function bjArcadeLimitesApuesta(jugador) {
   return { min, max, notas };
 }
 
+// Avisos para la pantalla de apuesta sobre los arcanos que cambian el valor de las
+// cartas o el reparto de ESTA ronda (la Estrella de Pasado, la Rueda invertida y la
+// Luna): condicionan cuánto arriesgar, así que se avisan antes de apostar. Las
+// versiones de Presente/Futuro de la Estrella no se repiten aquí: son reglas de mesa
+// fijas que ya están en el panel del tarot.
+function bjArcadeNotasCartas(jugador) {
+  const c = bjArcade;
+  const ronda = bjArcadeRondaActual();
+  const notas = [];
+  if (c.valoresCero.length === 1) {
+    notas.push(`Esta ronda las cartas de valor ${c.valoresCero[0]} cuentan como 0.`);
+  } else if (c.valoresCero.length > 1) {
+    notas.push(`Esta ronda las cartas de valor ${c.valoresCero.join(" y ")} cuentan como 0.`);
+  }
+  if (ronda.cartaCero) {
+    notas.push("Perdiste la ronda anterior: una de tus cartas iniciales cuenta como 0.");
+  }
+  if (bjTarotAplica("estrella-pa-n") && jugador.perdidasSeguidas > 0) {
+    notas.push("Perdiste la ronda anterior: tus ases valen siempre 11 esta ronda.");
+  }
+  if (bjTarotAplica("estrella-pa-i") && jugador.ganoPrevio) {
+    notas.push("Ganaste la ronda anterior: tus ases valen solo 1 esta ronda.");
+  }
+  if (bjArcadeSegundaTapada(bjArcadeIndiceActual())) {
+    notas.push("Tu segunda carta se reparte boca abajo: jugarás sin verla.");
+  }
+  return notas;
+}
+
 // Prepara y muestra la pantalla de apuesta del jugador de turno.
 function bjArcadeMostrarApuesta() {
   const c = bjArcade;
@@ -379,9 +452,11 @@ function bjArcadeMostrarApuesta() {
   document.getElementById("bj-apuesta-ronda").textContent = c.ronda + "/" + c.rondasTotal;
   bjArcadeRenderUpcard("bj-apuesta-dealer");
 
-  // Avisos: restricciones de los arcanos, deuda y multiplicador de la ronda.
+  // Avisos: restricciones de los arcanos, deuda, multiplicador de la ronda y los
+  // arcanos que tocan el valor de las cartas o el reparto (Estrella, Rueda, Luna).
   const notas = limites.notas.slice();
   if (c.multRonda > 1) notas.push(`Esta ronda las ganancias valen ×${c.multRonda}.`);
+  notas.push.apply(notas, bjArcadeNotasCartas(jugador));
   document.getElementById("bj-apuesta-deuda").textContent = notas.join(" ");
 
   bjArcadeActualizarApuestaStepper();
@@ -412,6 +487,13 @@ function bjArcadeApostar() {
   ronda.apuesta = c.apuestaActual;
   ronda.manos = [bjArcadeNuevaMano(ronda.cartasIniciales, c.apuestaActual, false)];
   ronda.manoActiva = 0;
+
+  // El Loco invertido (Futuro): en la última ronda TODOS descartan su mano inicial
+  // y juegan una nueva a ciegas que se planta sola: el turno pasa de largo.
+  if (bjTarotAplica("loco-fu-i")) {
+    bjArcadeLocoDescartar(bjArcadeCtx(), true);
+    return;
+  }
 
   mostrarPantalla("bj-arcade");
   bjArcadeRenderMesa();
@@ -447,7 +529,10 @@ function bjArcadeManoActiva() {
 // partida terminará al acabar la ronda. Si se pasa, la mano termina.
 function bjArcadePedir() {
   const mano = bjArcadeManoActiva();
-  if (bjValorMano(mano.cartas) >= 21) return; // con 21 ya no se pide
+  const mod = bjArcadeModActual();
+  if (bjValorMano(mano.cartas, mod) >= 21) return; // con 21 ya no se pide
+  if (bjArcadeDebeDoblar()) return; // el Mago (Futuro): estás obligado a doblar
+  bjArcade.eligiendo = null;
   const carta = bjRobar(bjArcade.mazo);
   if (!carta) {
     bjArcade.mazoAgotado = true;
@@ -456,7 +541,13 @@ function bjArcadePedir() {
     return;
   }
   mano.cartas.push(carta);
-  if (bjEsBust(mano.cartas)) {
+  bjArcadeRondaActual().espiando = false; // robar gasta la espiada de la Sacerdotisa
+  if (bjEsBust(mano.cartas, mod)) {
+    // El Juicio: una «segunda oportunidad» puede descartar la carta del bust.
+    if (bjArcadeSegundaOportunidad(mano)) {
+      bjArcadeRenderMesa();
+      return;
+    }
     mano.terminada = true;
     bjArcadeAvanzarMano();
   } else {
@@ -464,10 +555,33 @@ function bjArcadePedir() {
   }
 }
 
+// El Juicio: la segunda oportunidad descarta la carta con la que te acabas de
+// pasar y sigues jugando como si nada. Normal en Presente (una vez por partida y
+// jugador) o en Pasado (viniendo de perder dos rondas seguidas, una por ronda).
+// Devuelve true si la ha gastado (la carta ya está fuera de la mano).
+function bjArcadeSegundaOportunidad(mano) {
+  const jugador = bjArcadeJugadorActual();
+  const ronda = bjArcadeRondaActual();
+  if (bjTarotAplica("juicio-pr-n") && !jugador.arcanosUsados["juicio-pr-n"]) {
+    jugador.arcanosUsados["juicio-pr-n"] = true;
+  } else if (
+    bjTarotAplica("juicio-pa-n") &&
+    jugador.perdidasSeguidas >= 2 &&
+    !ronda.arcanosUsados["juicio-pa-n"]
+  ) {
+    ronda.arcanosUsados["juicio-pa-n"] = true;
+  } else {
+    return false;
+  }
+  mano.cartas.pop(); // la carta del bust queda fuera del juego
+  return true;
+}
+
 // "Plantarse": la mano activa queda como está. La Templanza invertida lo prohíbe
 // con menos de 14 (el botón ya va deshabilitado; esto es el cinturón).
 function bjArcadePlantarse() {
   if (!bjArcadePuedePlantarse()) return;
+  bjArcade.eligiendo = null;
   bjArcadeManoActiva().terminada = true;
   bjArcadeAvanzarMano();
 }
@@ -475,12 +589,14 @@ function bjArcadePlantarse() {
 // "Doblar": paga otra apuesta sobre la mano activa, roba UNA carta y la planta.
 function bjArcadeDoblar() {
   if (!bjArcadePuedeDoblar()) return;
+  bjArcade.eligiendo = null;
   const mano = bjArcadeManoActiva();
   bjArcadeJugadorActual().pila -= mano.apuesta;
   mano.doblo = true;
   const carta = bjRobar(bjArcade.mazo);
   if (!carta) bjArcade.mazoAgotado = true;
   else mano.cartas.push(carta);
+  bjArcadeRondaActual().espiando = false; // robar gasta la espiada de la Sacerdotisa
   mano.terminada = true;
   bjArcadeAvanzarMano();
 }
@@ -488,6 +604,7 @@ function bjArcadeDoblar() {
 // "Dividir" (split): separa un par en dos manos con su apuesta (máximo dos manos).
 function bjArcadeDividir() {
   if (!bjArcadePuedeDividir()) return;
+  bjArcade.eligiendo = null;
   const ronda = bjArcadeRondaActual();
   const original = ronda.manos[0];
   bjArcadeJugadorActual().pila -= ronda.apuesta;
@@ -503,6 +620,7 @@ function bjArcadeDividir() {
 // "Rendirse": abandona la mano; se le devuelve media apuesta al resolver la ronda.
 function bjArcadeRendirse() {
   if (!bjArcadePuedeRendirse()) return;
+  bjArcade.eligiendo = null;
   const mano = bjArcadeManoActiva();
   mano.rendido = true;
   mano.terminada = true;
@@ -562,13 +680,39 @@ function bjArcadeSiguienteJugador() {
 // El ruleset consultado es el EFECTIVO de la partida (bjArcade.ruleset), que el
 // Hierofante puede haber pisado al hacer la tirada.
 
+// Regla opcional efectiva AHORA MISMO: el ruleset congelado de la partida, salvo
+// que el Hierofante de Futuro mande en la última ronda (normal: todas las
+// opcionales fuera; invertida: todas dentro menos dividir). Su versión de Presente
+// ya está horneada en bjArcade.ruleset (bjTarotRulesetEfectivo).
+function bjArcadeReglaActiva(clave) {
+  if (bjTarotAplica("hierofante-fu-n")) return false;
+  if (bjTarotAplica("hierofante-fu-i")) return clave !== "dividir";
+  return !!bjArcade.ruleset[clave];
+}
+
+// El Mago normal (Futuro): en la última ronda todos DEBEN doblar con su mano
+// inicial (salvo blackjack natural). Mientras la obligación siga viva bloquea
+// pedir/plantarse/dividir/rendirse; si no hay fondos o cartas para doblar, decae
+// (nadie puede quedarse sin jugada posible).
+function bjArcadeDebeDoblar() {
+  if (!bjTarotAplica("mago-fu-n")) return false;
+  const ronda = bjArcadeRondaActual();
+  const mano = bjArcadeManoActiva();
+  const jugador = bjArcadeJugadorActual();
+  if (ronda.manos.length !== 1 || mano.cartas.length !== 2 || mano.doblo) return false;
+  if (bjEsBlackjackNatural(mano.cartas, bjArcadeModActual())) return false;
+  return jugador.pila >= mano.apuesta && bjCartasRestantes(bjArcade.mazo) >= 1;
+}
+
 // Plantarse: la Muerte y la Templanza invertidas ponen suelos a lo que puedes dejar
 // en la mesa (te obligan a seguir pidiendo).
 function bjArcadePuedePlantarse() {
   const mano = bjArcadeManoActiva();
-  const total = bjValorMano(mano.cartas);
+  const total = bjValorMano(mano.cartas, bjArcadeModActual());
   const inicial = mano.cartas.length <= 2;
 
+  // El Mago normal (Futuro): estás obligado a doblar tu mano inicial.
+  if (bjArcadeDebeDoblar()) return false;
   // La Muerte invertida (Presente): nadie se planta con menos de 17.
   if (bjTarotAplica("muerte-pr-i") && total < 17) return false;
   // La Templanza invertida (Presente): no puedes plantarte con la mano inicial.
@@ -586,6 +730,10 @@ function bjArcadePuedeDoblar() {
   const mano = bjArcadeManoActiva();
   const jugador = bjArcadeJugadorActual();
 
+  // El Mago normal (Futuro): doblar es OBLIGATORIO, así que siempre se puede (la
+  // obligación ya comprueba fondos y cartas, y pisa al ruleset y a la Fuerza).
+  if (bjArcadeDebeDoblar()) return true;
+
   // El Mago invertido: en Pasado, si el dealer hizo blackjack ya nadie dobla el resto
   // de la partida (flag `magoNoDoblar`); en Futuro, nadie dobla en la última ronda.
   if (c.magoNoDoblar || bjTarotAplica("mago-fu-i")) return false;
@@ -594,11 +742,12 @@ function bjArcadePuedeDoblar() {
   // (Presente o Futuro), solo con un total de 9, 10 u 11.
   const cartasOk = bjTarotAplica("fuerza-pr-n") || mano.cartas.length === 2;
   const soloDuros = bjTarotAplica("fuerza-pr-i") || bjTarotAplica("fuerza-fu-i");
-  const totalOk = !soloDuros || [9, 10, 11].includes(bjValorMano(mano.cartas));
+  const totalOk = !soloDuros || [9, 10, 11].includes(bjValorMano(mano.cartas, bjArcadeModActual()));
 
   // El Emperador invertido (Presente): el último del ranking puede doblar aunque la
-  // regla esté desactivada.
-  const permitido = c.ruleset.doblar || (bjTarotAplica("emperador-pr-i") && bjArcadeEsUltimo(jugador));
+  // regla esté desactivada. El Hierofante de Futuro puede pisar el ruleset entero.
+  const permitido =
+    bjArcadeReglaActiva("doblar") || (bjTarotAplica("emperador-pr-i") && bjArcadeEsUltimo(jugador));
 
   return (
     permitido &&
@@ -614,7 +763,11 @@ function bjArcadePuedeDividir() {
   const ronda = bjArcadeRondaActual();
   // En multijugador no se permite dividir, para no añadir complejidad al torneo.
   if (bjArcade.jugadores.length > 1) return false;
-  if (!bjArcade.ruleset.dividir || ronda.manos.length !== 1) return false;
+  // Con la 2.ª carta boca abajo (la Luna) no se divide: no ves si tienes pareja.
+  if (bjArcadeSegundaTapada(bjArcadeIndiceActual())) return false;
+  // El Mago normal (Futuro): estás obligado a doblar tu mano inicial.
+  if (bjArcadeDebeDoblar()) return false;
+  if (!bjArcadeReglaActiva("dividir") || ronda.manos.length !== 1) return false;
   const cartas = ronda.manos[0].cartas;
   if (cartas.length !== 2) return false;
   if (bjValorCarta(cartas[0].valor) !== bjValorCarta(cartas[1].valor)) return false;
@@ -627,6 +780,8 @@ function bjArcadePuedeRendirse() {
   const ronda = bjArcadeRondaActual();
   const jugador = bjArcadeJugadorActual();
 
+  // El Mago normal (Futuro): estás obligado a doblar tu mano inicial.
+  if (bjArcadeDebeDoblar()) return false;
   // El Colgado invertido: rendirse prohibido (Presente toda la partida, Futuro en la
   // última ronda).
   if (bjTarotAplica("colgado-pr-i") || bjTarotAplica("colgado-fu-i")) return false;
@@ -640,12 +795,295 @@ function bjArcadePuedeRendirse() {
   const tarde = bjTarotAplica("colgado-pr-n") || bjTarotAplica("colgado-fu-n");
   const cartasOk = tarde || ronda.manos[0].cartas.length === 2;
   return (
-    bjArcade.ruleset.rendirse &&
+    bjArcadeReglaActiva("rendirse") &&
     ronda.manos.length === 1 &&
     cartasOk &&
     jugador.pila >= 0
   );
 }
+
+// ============================================================
+//  Acciones especiales del tarot (Fase 9.5)
+// ============================================================
+//
+// Algunos arcanos no son una regla pasiva sino una ACCIÓN que el jugador decide
+// usar (descartar la mano, cambiar una carta, espiar el mazo…). Cada una se
+// registra en BJ_ARCADE_ESPECIALES y la mesa pinta un botón con la miniatura de
+// la carta del arcano cuando (1) el efecto está en la tirada y aplica ahora
+// (bjTarotAplica), (2) no se ha gastado ya su uso y (3) su `disponible(ctx)`
+// dice que puede usarse en este preciso momento.
+//
+// Forma de una entrada:
+//   - efecto: clave del efecto en la tirada ("loco-pr-n"…).
+//   - etiqueta: texto corto del botón (la explicación completa va en el title).
+//   - unaVez: "partida" (se apunta en jugador.arcanosUsados) o "ronda" (en
+//     jugadoresRonda[i].arcanosUsados). Sin `unaVez`, usable sin límite.
+//   - disponible(ctx): ¿puede usarse ahora? (además de las condiciones de arriba).
+//   - usar(ctx): ejecuta el efecto. Debe dejar la mesa repintada (o avanzar el
+//     turno). El uso se marca ANTES de llamar a usar().
+//
+// ctx = { c: bjArcade, indice, jugador, ronda, mano } (bjArcadeCtx), siempre del
+// jugador de turno: las acciones especiales solo existen durante tu propio turno.
+
+function bjArcadeCtx() {
+  return {
+    c: bjArcade,
+    indice: bjArcadeIndiceActual(),
+    jugador: bjArcadeJugadorActual(),
+    ronda: bjArcadeRondaActual(),
+    mano: bjArcadeManoActiva(),
+  };
+}
+
+// ¿Puede usarse esta acción especial ahora mismo?
+function bjArcadeEspecialUsable(entrada, ctx) {
+  if (!bjTarotAplica(entrada.efecto)) return false;
+  if (entrada.unaVez === "partida" && ctx.jugador.arcanosUsados[entrada.efecto]) return false;
+  if (entrada.unaVez === "ronda" && ctx.ronda.arcanosUsados[entrada.efecto]) return false;
+  return entrada.disponible(ctx);
+}
+
+// ¿Sigue el jugador con su mano inicial POR JUGAR? (2 cartas, sin doblar, dividir,
+// rendirse ni plantarse): condición común de los descartes del Loco/Enamorados.
+function bjArcadeConManoInicial(ctx) {
+  return (
+    ctx.ronda.manos.length === 1 &&
+    ctx.mano.cartas.length === 2 &&
+    !ctx.mano.doblo &&
+    !ctx.mano.terminada
+  );
+}
+
+// --- El Loco: descartar la mano inicial y robar otra ---
+
+// Descarta la mano inicial del jugador de turno y le reparte una nueva de 2
+// cartas (las descartadas quedan fuera del juego, no vuelven al zapato). Con
+// `aCiegas`, la mano nueva va boca abajo y se planta sola, sin poder pedir (el
+// Loco invertido). Si con el descarte se va la carta a 0 de la Rueda (Pasado),
+// el castigo se va con ella: descartar es una forma legítima de librarse.
+function bjArcadeLocoDescartar(ctx, aCiegas) {
+  const c = bjArcade;
+  const cartas = [bjRobar(c.mazo), bjRobar(c.mazo)].filter((carta) => carta);
+  if (cartas.length < 2) c.mazoAgotado = true;
+  const mano = bjArcadeNuevaMano(cartas, ctx.ronda.apuesta, false);
+  mano.aCiegas = aCiegas;
+  ctx.ronda.manos = [mano];
+  ctx.ronda.manoActiva = 0;
+  ctx.ronda.cartasIniciales = cartas; // lo que la mesa compartida enseña tapado
+  ctx.ronda.cartaCero = null;
+  if (aCiegas || cartas.length < 2) {
+    mano.terminada = true;
+    bjArcadeAvanzarMano();
+  } else {
+    bjArcadeRenderMesa();
+  }
+}
+
+// --- El Diablo (Presente): tentar al diablo con una 4.ª carta ---
+
+// Pide una 4.ª carta con 3 en mano; la mano queda marcada (`diablo`) y, si acaba
+// ganando sin pasarse, cobra ×2 (lo aplica bjArcadeMultJugador). Un bust pierde
+// como siempre: el multiplicador solo toca ganancias.
+function bjArcadeTentarDiablo(ctx) {
+  const carta = bjRobar(bjArcade.mazo);
+  if (!carta) {
+    bjArcade.mazoAgotado = true;
+    ctx.mano.terminada = true;
+    bjArcadeAvanzarMano();
+    return;
+  }
+  ctx.mano.cartas.push(carta);
+  ctx.mano.diablo = true;
+  ctx.ronda.espiando = false; // robar carta gasta la espiada de la Sacerdotisa
+  if (bjEsBust(ctx.mano.cartas, bjArcadeMod(ctx.indice))) {
+    ctx.mano.terminada = true;
+    bjArcadeAvanzarMano();
+  } else {
+    bjArcadeRenderMesa();
+  }
+}
+
+// --- El Mago / Los Enamorados: cambiar una carta de la mano ---
+
+// Modo «elige una carta»: el botón lo activa (o lo cancela con un segundo toque) y
+// bjArcadeRenderManos pinta las cartas elegibles pulsables; al tocar una se marca
+// el uso y se cambia (bjArcadeCambiarCarta). Las entradas del registro con
+// `eligeCarta: true` entran por aquí en vez de por `usar`.
+function bjArcadeElegirCarta(ctx, entrada) {
+  const c = bjArcade;
+  c.eligiendo =
+    c.eligiendo && c.eligiendo.efecto === entrada.efecto
+      ? null
+      : { efecto: entrada.efecto, unaVez: entrada.unaVez, indices: bjArcadeIndicesCambiables(ctx) };
+  bjArcadeRenderMesa();
+}
+
+// ¿Qué cartas de la mano activa pueden cambiarse? Todas menos la tapada de la
+// Luna: cambiar a ciegas tu carta oculta delataría lo que era al ver la nueva.
+function bjArcadeIndicesCambiables(ctx) {
+  const tapada = bjArcadeSegundaTapada(ctx.indice);
+  return ctx.mano.cartas
+    .map((carta, idx) => idx)
+    .filter((idx) => !(tapada && idx === 1));
+}
+
+// ¿Puede el jugador de turno cambiar una carta ahora? (condición común del Mago y
+// de los Enamorados, además de las suyas propias).
+function bjArcadePuedeCambiarCarta(ctx) {
+  return (
+    !ctx.mano.terminada &&
+    !ctx.mano.aCiegas &&
+    bjCartasRestantes(ctx.c.mazo) >= 1 &&
+    bjArcadeIndicesCambiables(ctx).length > 0
+  );
+}
+
+// Cambia la carta `idx` de la mano activa por la superior del mazo (la cambiada
+// queda fuera del juego). Si el cambio provoca un bust, la mano termina como con
+// cualquier carta pedida. La carta a 0 de la Rueda se va si era la cambiada.
+function bjArcadeCambiarCarta(ctx, idx) {
+  const c = bjArcade;
+  const nueva = bjRobar(c.mazo);
+  if (!nueva) {
+    c.mazoAgotado = true;
+    bjArcadeRenderMesa();
+    return;
+  }
+  if (ctx.mano.cartas[idx] === ctx.ronda.cartaCero) ctx.ronda.cartaCero = null;
+  ctx.mano.cartas[idx] = nueva;
+  // Se reanima desde la carta cambiada (volteo reverso→frente al repintar).
+  ctx.mano.mostradas = Math.min(ctx.mano.mostradas || 0, idx);
+  if (bjEsBust(ctx.mano.cartas, bjArcadeMod(ctx.indice))) {
+    ctx.mano.terminada = true;
+    bjArcadeAvanzarMano();
+  } else {
+    bjArcadeRenderMesa();
+  }
+}
+
+const BJ_ARCADE_ESPECIALES = [
+  // El Loco normal (Presente): una vez por partida, nueva mano inicial.
+  {
+    efecto: "loco-pr-n",
+    etiqueta: "Nueva mano",
+    unaVez: "partida",
+    disponible: bjArcadeConManoInicial,
+    usar: (ctx) => bjArcadeLocoDescartar(ctx, false),
+  },
+  // El Loco invertido (Presente): una vez por partida, nueva mano… a ciegas.
+  {
+    efecto: "loco-pr-i",
+    etiqueta: "Nueva mano a ciegas",
+    unaVez: "partida",
+    disponible: bjArcadeConManoInicial,
+    usar: (ctx) => bjArcadeLocoDescartar(ctx, true),
+  },
+  // El Loco normal (Futuro): en la última ronda, todos pueden cambiar de mano
+  // (bjTarotAplica ya filtra que sea la última; una vez por ronda y jugador).
+  {
+    efecto: "loco-fu-n",
+    etiqueta: "Nueva mano",
+    unaVez: "ronda",
+    disponible: bjArcadeConManoInicial,
+    usar: (ctx) => bjArcadeLocoDescartar(ctx, false),
+  },
+  // El Diablo normal (Presente): con 3 cartas, pide una 4.ª; si no te pasas, ×2.
+  {
+    efecto: "diablo-pr-n",
+    etiqueta: "Tentar al diablo",
+    unaVez: "partida",
+    disponible: (ctx) =>
+      ctx.mano.cartas.length === 3 &&
+      !ctx.mano.terminada &&
+      bjCartasRestantes(ctx.c.mazo) >= 1,
+    usar: bjArcadeTentarDiablo,
+  },
+  // El Carro normal (Presente): apuesta lateral por el líder actual. Si la mano
+  // del líder gana la ronda, cobras +3 aunque la tuya pierda (bjArcadeAjustesDeRonda).
+  {
+    efecto: "carro-pr-n",
+    etiqueta: "Apostar por el líder",
+    unaVez: "ronda",
+    disponible: (ctx) =>
+      ctx.c.jugadores.length > 1 && !bjArcadeEsLider(ctx.jugador) && !ctx.mano.terminada,
+    usar: (ctx) => {
+      // Se apunta QUIÉNES van líderes al apostar (puede haber empate en cabeza):
+      // cobras si cualquiera de ellos acaba ganando su mano.
+      ctx.ronda.liderApostado = ctx.c.jugadores
+        .map((jugador, i) => i)
+        .filter((i) => bjArcadeEsLider(ctx.c.jugadores[i]));
+      bjArcadeRenderMesa();
+    },
+  },
+  // La Sacerdotisa normal (Pasado): tras ganar sin pedir cartas, espía la carta
+  // superior del mazo antes de tu próxima decisión (se apaga al robar).
+  {
+    efecto: "sacerdotisa-pa-n",
+    etiqueta: "Espiar el mazo",
+    unaVez: "ronda",
+    disponible: (ctx) =>
+      ctx.jugador.ganoSinPedir && !ctx.mano.terminada && bjCartasRestantes(ctx.c.mazo) >= 1,
+    usar: (ctx) => {
+      ctx.ronda.espiando = true;
+      bjArcadeRenderMesa();
+    },
+  },
+  // El Mago normal (Presente): una vez por partida, cambia una carta de tu mano.
+  {
+    efecto: "mago-pr-n",
+    etiqueta: "Cambiar una carta",
+    unaVez: "partida",
+    disponible: bjArcadePuedeCambiarCarta,
+    eligeCarta: true,
+  },
+  // El Mago normal (Pasado): tras un blackjack, cambias una carta la ronda siguiente.
+  {
+    efecto: "mago-pa-n",
+    etiqueta: "Cambiar una carta",
+    unaVez: "ronda",
+    disponible: (ctx) => ctx.jugador.naturalPrevio && bjArcadePuedeCambiarCarta(ctx),
+    eligeCarta: true,
+  },
+  // Los Enamorados normal (Presente): una vez por partida, cambia una de tus dos
+  // cartas iniciales por la superior del mazo.
+  {
+    efecto: "enamorados-pr-n",
+    etiqueta: "Cambiar una carta",
+    unaVez: "partida",
+    disponible: (ctx) => bjArcadeConManoInicial(ctx) && bjArcadePuedeCambiarCarta(ctx),
+    eligeCarta: true,
+  },
+  // Los Enamorados normal (Pasado): tras perder dos rondas seguidas, descarta una
+  // carta inicial de tu mano y roba otra.
+  {
+    efecto: "enamorados-pa-n",
+    etiqueta: "Cambiar una carta",
+    unaVez: "ronda",
+    disponible: (ctx) =>
+      ctx.jugador.perdidasSeguidas >= 2 &&
+      bjArcadeConManoInicial(ctx) &&
+      bjArcadePuedeCambiarCarta(ctx),
+    eligeCarta: true,
+  },
+  // Los Enamorados normal (Futuro): en la última ronda eliges entre dos manos
+  // iniciales. El botón enseña la mano alternativa (campo `cartas`); puedes ir y
+  // volver mientras no hayas jugado la mano.
+  {
+    efecto: "enamorados-fu-n",
+    etiqueta: "Jugar la otra mano",
+    cartas: (ctx) => ctx.ronda.cartasAlt,
+    disponible: (ctx) => !!ctx.ronda.cartasAlt && bjArcadeConManoInicial(ctx),
+    usar: (ctx) => {
+      const otra = ctx.ronda.cartasAlt;
+      ctx.ronda.cartasAlt = ctx.ronda.cartasIniciales;
+      ctx.ronda.cartasIniciales = otra;
+      ctx.ronda.manos = [bjArcadeNuevaMano(otra, ctx.ronda.apuesta, false)];
+      ctx.ronda.manoActiva = 0;
+      ctx.ronda.cartaCero = null; // la carta a 0 de la Rueda era de la mano dejada
+      bjArcadeRenderMesa();
+    },
+  },
+];
 
 // --- Ranking en vivo (lo consultan el Emperador, el Ermitaño y el Carro) ---
 // Se mide sobre la pila ACTUAL de cada jugador. En solitario no hay ranking: nadie
@@ -675,6 +1113,88 @@ function bjArcadeLideraVictorias(jugador) {
 }
 
 // ============================================================
+//  Valor de las cartas bajo los arcanos (Estrella, Rueda inv., Luna)
+// ============================================================
+//
+// La Estrella y la Rueda invertida cambian cuánto SUMAN las cartas de los
+// jugadores. El motor lo soporta con el parámetro `mod` de bjValorMano /
+// bjEsBust / bjEsBlackjackNatural (y `opciones.modJugador` de bjResolverMano);
+// aquí se construye ese modificador según la tirada. El dealer cuenta SIEMPRE
+// con los valores estándar: los arcanos retuercen la suerte de los jugadores.
+
+// Sortea `n` valores de carta distintos (la Rueda invertida los pone a 0).
+function bjArcadeSortearValores(n) {
+  return barajar(BJ_VALORES).slice(0, n);
+}
+
+// Escala de valores del as según la Estrella (de mayor a menor; bjValorMano va
+// rebajando por ella mientras la mano se pase). Las posiciones de Pasado dependen
+// de cómo acabó la ronda anterior de ESE jugador. Sin Estrella activa, null (el
+// motor usa la escala estándar [11, 1]). Solo puede haber una Estrella en la
+// tirada, así que las claves no compiten entre sí.
+function bjArcadeValoresAs(jugador) {
+  if (bjTarotAplica("estrella-pa-n") && jugador.perdidasSeguidas > 0) return [11];
+  if (bjTarotAplica("estrella-pa-i") && jugador.ganoPrevio) return [1];
+  if (bjTarotAplica("estrella-pr-n")) return [12, 1];
+  if (bjTarotAplica("estrella-pr-i")) return [1];
+  if (bjTarotAplica("estrella-fu-n")) return [12, 11, 1];
+  if (bjTarotAplica("estrella-fu-i")) return [0];
+  return null;
+}
+
+// Modificador de valor de la mano del jugador `indice` en la ronda en curso, o
+// null si ningún arcano toca sus valores (el caso normal: el motor va más ligero).
+function bjArcadeMod(indice) {
+  const c = bjArcade;
+  const jugador = c.jugadores[indice];
+  const ronda = c.jugadoresRonda[indice];
+
+  const valoresAs = bjArcadeValoresAs(jugador);
+  const cartaCero = ronda ? ronda.cartaCero : null;
+  const hayCeros = (c.valoresCero && c.valoresCero.length > 0) || cartaCero;
+
+  // La Muerte normal: pasarse con 22 exacto no pierde (Presente) o cualquier bust
+  // cuenta 12 (Futuro, última ronda): el total «resucita» y se sigue jugando. Solo
+  // para los jugadores: un dealer que no puede pasarse sería imbatible.
+  let transformarTotal = null;
+  if (bjTarotAplica("muerte-pr-n")) transformarTotal = (total) => (total === 22 ? 12 : total);
+  if (bjTarotAplica("muerte-fu-n")) transformarTotal = (total) => (total > 21 ? 12 : total);
+
+  if (!valoresAs && !hayCeros && !transformarTotal) return null;
+
+  const mod = {};
+  if (valoresAs) mod.valoresAs = valoresAs;
+  if (hayCeros) {
+    mod.valorCero = (carta) =>
+      carta === cartaCero || (c.valoresCero && c.valoresCero.indexOf(carta.valor) !== -1);
+  }
+  if (transformarTotal) mod.transformarTotal = transformarTotal;
+  return mod;
+}
+
+// Modificador del jugador de turno (atajo para las comprobaciones de su mano).
+function bjArcadeModActual() {
+  return bjArcadeMod(bjArcadeIndiceActual());
+}
+
+// ¿Juega este jugador con su SEGUNDA carta boca abajo? La Luna normal la tapa a
+// todos (Presente toda la partida, Futuro solo la última ronda); la invertida en
+// Pasado, solo a quien viene de perder. Mientras esté tapada, el jugador no la ve
+// ni en su mano ni en el total (y tampoco puede dividir); se revela al resolver.
+function bjArcadeSegundaTapada(indice) {
+  if (bjTarotAplica("luna-pr-n") || bjTarotAplica("luna-fu-n")) return true;
+  if (bjTarotAplica("luna-pa-i") && bjArcade.jugadores[indice].perdidasSeguidas > 0) return true;
+  return false;
+}
+
+// Texto del total de una mano con la 2.ª carta tapada: suma solo lo visible y deja
+// un "+?" (mismo patrón que el total del dealer con su oculta).
+function bjArcadeTotalConTapada(cartas, mod) {
+  const visibles = cartas.filter((carta, idx) => idx !== 1);
+  return bjValorMano(visibles, mod) + "+?";
+}
+
+// ============================================================
 //  Resolución de la ronda (pantalla bj-arcade-ronda)
 // ============================================================
 
@@ -698,14 +1218,33 @@ function bjArcadeResolverRonda() {
   if (bjTarotAplica("torre-pa-n") && c.dealerBlando) opciones.limiteDealer = 16;
   if (bjTarotAplica("torre-pa-i") && bjArcadeAlguien21()) opciones.limiteDealer = 18;
 
-  const algunaViva = c.jugadoresRonda.some((ronda) =>
-    ronda.manos.some((mano) => !mano.rendido && !bjEsBust(mano.cartas))
+  const algunaViva = c.jugadoresRonda.some((ronda, i) =>
+    ronda.manos.some((mano) => !mano.rendido && !bjEsBust(mano.cartas, bjArcadeMod(i)))
   );
-  if (algunaViva) bjJugarDealer(c.manoDealer, c.mazo, opciones);
+  if (algunaViva) {
+    bjJugarDealer(c.manoDealer, c.mazo, opciones);
+
+    // El Mago invertido (Presente): una vez por partida, si la mano final del
+    // dealer suma 17 justo, cambia su peor carta (la más baja) por otra del mazo
+    // y termina su turno con la mano nueva (puede mejorar… o pasarse).
+    if (bjTarotAplica("mago-pr-i") && !c.magoDealerUso && bjValorMano(c.manoDealer) === 17) {
+      c.magoDealerUso = true;
+      const nueva = bjRobar(c.mazo);
+      if (nueva) {
+        let peor = 0;
+        c.manoDealer.forEach((carta, idx) => {
+          if (bjValorCarta(carta.valor) < bjValorCarta(c.manoDealer[peor].valor)) peor = idx;
+        });
+        c.manoDealer[peor] = nueva;
+        bjJugarDealer(c.manoDealer, c.mazo, opciones); // por si el cambio lo deja corto
+      }
+    }
+  }
 
   c.jugadoresRonda.forEach((ronda, i) => {
     const jugador = c.jugadores[i];
     const puedeNatural = ronda.manos.length === 1; // un 21 tras split no es blackjack
+    const mod = bjArcadeMod(i); // la Estrella / la Rueda inv. sobre SUS cartas
 
     // Multiplicador de GANANCIAS de este jugador en esta ronda. Se guarda en la ronda
     // para que la resolución y el display de la mesa enseñen exactamente el mismo ×N.
@@ -721,9 +1260,9 @@ function bjArcadeResolverRonda() {
       const res = bjResolverMano(
         mano.cartas,
         c.manoDealer,
-        Object.assign({ jugadorPuedeNatural: puedeNatural }, opciones)
+        Object.assign({ jugadorPuedeNatural: puedeNatural, modJugador: mod }, opciones)
       );
-      let pago = bjArcadeAjustarPago(res, mano, puedeNatural, opciones, jugador);
+      let pago = bjArcadeAjustarPago(res, mano, puedeNatural, opciones, jugador, mod);
       // El multiplicador solo toca lo que se GANA, nunca las pérdidas ni los empates.
       if (pago > 0) pago *= mult;
       const stake = mano.apuesta * (mano.doblo ? 2 : 1);
@@ -739,8 +1278,8 @@ function bjArcadeResolverRonda() {
 
 // ¿Ha logrado alguien un 21 esta ronda? (La Torre invertida, en Pasado, lo castiga.)
 function bjArcadeAlguien21() {
-  return bjArcade.jugadoresRonda.some((ronda) =>
-    ronda.manos.some((mano) => bjValorMano(mano.cartas) === 21)
+  return bjArcade.jugadoresRonda.some((ronda, i) =>
+    ronda.manos.some((mano) => bjValorMano(mano.cartas, bjArcadeMod(i)) === 21)
   );
 }
 
@@ -783,6 +1322,15 @@ function bjArcadeMultJugador(indice) {
   if (bjTarotAplica("luna-fu-n")) mult *= 2.5;
   if (bjTarotAplica("luna-pa-n") && jugador.ganoACiegas) mult *= 1.15;
 
+  // El Loco normal (Pasado): ganar plantándote con tu mano inicial paga ×1,5. Como
+  // todo lo de esta función, solo multiplica GANANCIAS: si esa mano pierde, no hace
+  // nada (y el display lo enseña como el ×N al que optas mientras no pidas carta).
+  if (bjTarotAplica("loco-pa-n") && bjArcadeManoInicialIntacta(ronda)) mult *= 1.5;
+
+  // El Diablo normal (Presente): tentaste al diablo con una 4.ª carta y no te
+  // pasaste: tu ganancia cobra ×2 (un bust pierde igual: esto solo toca ganancias).
+  if (bjTarotAplica("diablo-pr-n") && ronda.manos.some((mano) => mano.diablo)) mult *= 2;
+
   // Los arcanos que premian DOBLAR: la Fuerza (×1,1) y el Diablo (×2).
   const doblo = ronda.manos.some((mano) => mano.doblo);
   if (doblo && (bjTarotAplica("fuerza-pa-n") || bjTarotAplica("fuerza-fu-n"))) mult *= 1.1;
@@ -810,6 +1358,17 @@ function bjArcadeMultJugador(indice) {
   return mult;
 }
 
+// ¿Conserva el jugador su mano inicial tal cual? (2 cartas, sin doblar, dividir ni
+// rendirse: lo que premia el Loco normal de Pasado si además esa mano gana.)
+function bjArcadeManoInicialIntacta(ronda) {
+  return (
+    ronda.manos.length === 1 &&
+    ronda.manos[0].cartas.length === 2 &&
+    !ronda.manos[0].doblo &&
+    !ronda.manos[0].rendido
+  );
+}
+
 // Texto del multiplicador para el display de la mesa: "×1", "×2,5"… (coma decimal,
 // como el resto del juego). Sin multiplicador activo, siempre se ve un ×1.
 function bjArcadeTextoMult(mult) {
@@ -822,10 +1381,10 @@ function bjArcadeTextoMult(mult) {
 //     o solo ×1,25 si vienes de pasarte (invertida).
 //   - La Templanza normal: plantarse con muchas cartas paga como blackjack.
 //   - El Mundo normal (Presente): el 21 exacto (sin ser natural) paga como blackjack.
-function bjArcadeAjustarPago(res, mano, puedeNatural, opciones, jugador) {
+function bjArcadeAjustarPago(res, mano, puedeNatural, opciones, jugador, mod) {
   let pagoNatural = opciones.pagoNatural != null ? opciones.pagoNatural : 1.5;
   let pago = res.pago;
-  const esNatural = puedeNatural && bjEsBlackjackNatural(mano.cartas);
+  const esNatural = puedeNatural && bjEsBlackjackNatural(mano.cartas, mod);
 
   // La Emperatriz de Pasado retoca cuánto vale ESTE natural (bonus acumulado o
   // castigo por haberte pasado). Al cambiar el pago del natural hay que reaplicarlo.
@@ -841,7 +1400,7 @@ function bjArcadeAjustarPago(res, mano, puedeNatural, opciones, jugador) {
     if (bjTarotAplica("templanza-pr-n") && cartas >= 5) pago = Math.max(pago, pagoNatural);
     if (bjTarotAplica("templanza-fu-n") && cartas >= 4) pago = Math.max(pago, pagoNatural);
     // El Mundo normal (Presente): el 21 exacto paga como blackjack.
-    if (bjTarotAplica("mundo-pr-n") && bjValorMano(mano.cartas) === 21) {
+    if (bjTarotAplica("mundo-pr-n") && bjValorMano(mano.cartas, mod) === 21) {
       pago = Math.max(pago, pagoNatural);
     }
   }
@@ -865,13 +1424,14 @@ function bjArcadeAjustesDeRonda() {
 
   c.jugadores.forEach((jugador, i) => {
     const ronda = c.jugadoresRonda[i];
+    const mod = bjArcadeMod(i);
     const gano = deltas[i] > 0;
     const perdio = deltas[i] < 0;
-    const sePaso = ronda.manos.some((mano) => bjEsBust(mano.cartas));
+    const sePaso = ronda.manos.some((mano) => bjEsBust(mano.cartas, mod));
     const doblo = ronda.manos.some((mano) => mano.doblo);
-    const natural = ronda.manos.length === 1 && bjEsBlackjackNatural(ronda.manos[0].cartas);
+    const natural = ronda.manos.length === 1 && bjEsBlackjackNatural(ronda.manos[0].cartas, mod);
     const veintiuno = ronda.manos.some(
-      (mano) => bjValorMano(mano.cartas) === 21 && !bjEsBlackjackNatural(mano.cartas)
+      (mano) => bjValorMano(mano.cartas, mod) === 21 && !bjEsBlackjackNatural(mano.cartas, mod)
     );
     // «Usó regla opcional» = dividió, dobló o se rindió (lo mira el Hierofante).
     const usoOpcional = ronda.manos.length > 1 || doblo || ronda.manos.some((mano) => mano.rendido);
@@ -887,12 +1447,18 @@ function bjArcadeAjustesDeRonda() {
     // --- Bonus en fichas ---
     // El Carro normal (Pasado): +5 por cada racha de 2 victorias seguidas.
     if (gano && bjTarotAplica("carro-pa-n") && jugador.racha >= 2) jugador.pila += 5;
+    // El Carro normal (Presente): apostaste por el líder y su mano ganó: +3 fichas
+    // aunque la tuya perdiera. `liderApostado` guarda quiénes iban en cabeza al apostar.
+    if (bjTarotAplica("carro-pr-n") && ronda.liderApostado &&
+        ronda.liderApostado.some((li) => deltas[li] > 0)) {
+      jugador.pila += 3;
+    }
     // El Hierofante (Pasado): +3 por ganar sin usar opcionales (normal) o usándolas (invertida).
     if (gano && bjTarotAplica("hierofante-pa-n") && !usoOpcional) jugador.pila += 3;
     if (gano && bjTarotAplica("hierofante-pa-i") && usoOpcional) jugador.pila += 3;
     // La Templanza normal (Pasado): +3 por ganar plantándose con 4 o más cartas.
     if (gano && bjTarotAplica("templanza-pa-n") &&
-        ronda.manos.some((mano) => !bjEsBust(mano.cartas) && mano.cartas.length >= 4)) {
+        ronda.manos.some((mano) => !bjEsBust(mano.cartas, mod) && mano.cartas.length >= 4)) {
       jugador.pila += 3;
     }
     // El Mundo (Pasado): +10 por cada 21 exacto, −10 por cada blackjack natural.
@@ -917,7 +1483,7 @@ function bjArcadeAjustesDeRonda() {
     if (sePaso && bjTarotAplica("loco-pa-i")) jugador.recargoMin += BJ_APUESTA_PASO;
     // La Templanza invertida (Pasado): plantarte con la mano inicial cuesta +5 de mínima.
     if (bjTarotAplica("templanza-pa-i") &&
-        ronda.manos.some((mano) => !mano.rendido && !bjEsBust(mano.cartas) && mano.cartas.length === 2)) {
+        ronda.manos.some((mano) => !mano.rendido && !bjEsBust(mano.cartas, mod) && mano.cartas.length === 2)) {
       jugador.recargoMin += BJ_APUESTA_PASO;
     }
 
@@ -939,6 +1505,14 @@ function bjArcadeAjustesDeRonda() {
     jugador.empatoPrevio = empato;
     if (empato) jugador.empates++;
     if (natural) jugador.blackjacksPrevios++;
+    // La Sacerdotisa (Pasado): ganar sin pedir cartas da una espiada de mazo.
+    jugador.ganoSinPedir = gano && ronda.manos.every((mano) => mano.cartas.length === 2);
+    // El Mago (Pasado): un blackjack da un cambio de carta la ronda siguiente.
+    jugador.naturalPrevio = natural;
+    // El Mundo (Futuro): cuenta de 21 exactos de toda la partida (+15 al final).
+    jugador.veintiunos += ronda.manos.filter(
+      (mano) => bjValorMano(mano.cartas, mod) === 21 && !bjEsBlackjackNatural(mano.cartas, mod)
+    ).length;
     // La Rueda normal (Pasado): tras ganar se sortea el ×1–×3 de tu PRÓXIMA ganancia.
     if (bjTarotAplica("rueda-pa-n")) jugador.multRueda = gano ? 1 + Math.floor(Math.random() * 3) : 1;
   });
@@ -975,7 +1549,9 @@ function bjArcadeAjustesDeRonda() {
   c.dealerRevelado = todosGanaron;  // El Sol normal (Pasado): revela su oculta
   c.dealerArraso = dealerArraso;    // El Sol invertido (Pasado): juega con las dos tapadas
   c.dealerBlando = dealerArraso;    // La Torre normal (Pasado): se ablanda a 16
-  c.contadorOculto = c.jugadoresRonda.some((ronda) => ronda.manos.some((mano) => bjEsBust(mano.cartas)));
+  c.contadorOculto = c.jugadoresRonda.some((ronda, i) =>
+    ronda.manos.some((mano) => bjEsBust(mano.cartas, bjArcadeMod(i)))
+  );
   // El Mago invertido (Pasado): si el dealer hace blackjack, se acabó doblar.
   if (dealerNatural && bjTarotAplica("mago-pa-i")) c.magoNoDoblar = true;
 }
@@ -1026,6 +1602,7 @@ function bjArcadeRondaSiguiente() {
 // ============================================================
 
 function bjArcadeFin() {
+  bjArcadeMundoFinal(); // antes que la Justicia: su ×1,2 multiplica el total final
   bjArcadeJusticiaFinal();
   if (bjArcade.jugadores.length === 1) {
     bjArcadeFinSolitario();
@@ -1033,6 +1610,22 @@ function bjArcadeFin() {
     bjArcadeFinRanking();
   }
   mostrarPantalla("bj-fin");
+}
+
+// El Mundo (Futuro): al acabar la partida, cada 21 exacto logrado suma +15 fichas
+// (normal) o cada blackjack natural resta 15 (invertida). Como la Justicia final,
+// usa bjTarotTiene: es un ajuste de fin de partida aunque el zapato la corte antes.
+function bjArcadeMundoFinal() {
+  if (bjTarotTiene("mundo-fu-n")) {
+    bjArcade.jugadores.forEach((jugador) => {
+      jugador.pila += 15 * jugador.veintiunos;
+    });
+  }
+  if (bjTarotTiene("mundo-fu-i")) {
+    bjArcade.jugadores.forEach((jugador) => {
+      jugador.pila -= 15 * jugador.blackjacksPrevios;
+    });
+  }
 }
 
 // La Justicia (Futuro): al acabar la partida, quien más empates acumule cobra ×1,2
@@ -1313,8 +1906,12 @@ function bjArcadeRenderMesa() {
 
   bjArcadeRenderMesaJugadores();
   bjArcadeRenderManos();
+  bjArcadeRenderEspeciales();
+  bjArcadeRenderProxima();
 
-  document.getElementById("bj-arcade-btn-pedir").disabled = bjValorMano(bjArcadeManoActiva().cartas) >= 21;
+  document.getElementById("bj-arcade-btn-pedir").disabled =
+    bjValorMano(bjArcadeManoActiva().cartas, bjArcadeModActual()) >= 21 ||
+    bjArcadeDebeDoblar();
   document.getElementById("bj-arcade-btn-plantarse").disabled = !bjArcadePuedePlantarse();
   document.getElementById("bj-arcade-btn-doblar").disabled = !bjArcadePuedeDoblar();
   document.getElementById("bj-arcade-btn-dividir").disabled = !bjArcadePuedeDividir();
@@ -1368,16 +1965,38 @@ function bjArcadeRenderMesaJugadores() {
       ? ronda.manos.reduce((acc, m) => acc.concat(m.cartas), [])
       : ronda.cartasIniciales;
 
+    // La Luna: su 2.ª carta sigue boca abajo también para el resto de la mesa hasta
+    // la resolución (si no, bastaría preguntar a un rival qué carta tienes). Una
+    // mano a ciegas del Loco invertido va entera tapada, también para los demás.
+    const modJug = bjArcadeMod(idx);
+    const tapadaSegunda = bjArcadeSegundaTapada(idx);
+    const aCiegas = ronda.manos.some((m) => m.aCiegas);
+
     if (yaJugo) {
       const total = document.createElement("span");
-      total.className = "bj-mesa-jug-total" + (bjEsBust(mano) ? " bj-total-bust" : "");
-      total.textContent = bjValorMano(mano);
+      if (aCiegas) {
+        total.className = "bj-mesa-jug-total";
+        total.textContent = "?";
+      } else if (tapadaSegunda) {
+        total.className = "bj-mesa-jug-total";
+        total.textContent = bjArcadeTotalConTapada(mano, modJug);
+      } else {
+        total.className = "bj-mesa-jug-total" + (bjEsBust(mano, modJug) ? " bj-total-bust" : "");
+        total.textContent = bjValorMano(mano, modJug);
+      }
       cab.appendChild(total);
     }
 
     const cartas = document.createElement("div");
     cartas.className = "bj-mesa-jug-cartas";
-    mano.forEach((carta) => cartas.appendChild(bjCrearCartaImg(carta, !yaJugo)));
+    mano.forEach((carta, i) => {
+      const oculta = !yaJugo || aCiegas || (tapadaSegunda && i === 1);
+      const img = bjCrearCartaImg(carta, oculta);
+      if (!oculta && modJug && modJug.valorCero && modJug.valorCero(carta)) {
+        img.classList.add("bj-carta-cero");
+      }
+      cartas.appendChild(img);
+    });
 
     bloque.append(cab, cartas);
 
@@ -1392,12 +2011,98 @@ function bjArcadeRenderMesaJugadores() {
   cont.hidden = false;
 }
 
-// Pinta la(s) mano(s) del jugador de turno (una, o dos al dividir).
+// Pinta los botones de acciones especiales del tarot que el jugador de turno puede
+// usar AHORA (ver BJ_ARCADE_ESPECIALES). Cada botón lleva la miniatura de la carta
+// del arcano y una etiqueta; el texto completo del efecto va en el title. Se
+// repinta con la mesa: los botones aparecen y desaparecen según el estado.
+function bjArcadeRenderEspeciales() {
+  const cont = document.getElementById("bj-arcade-especiales");
+  cont.innerHTML = "";
+  const ctx = bjArcadeCtx();
+
+  BJ_ARCADE_ESPECIALES.forEach((entrada) => {
+    if (!bjArcadeEspecialUsable(entrada, ctx)) return;
+    const arcano = bjEstado.tarot.find((e) => e.efecto === entrada.efecto);
+    const eligiendo = bjArcade.eligiendo && bjArcade.eligiendo.efecto === entrada.efecto;
+
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "bj-btn-especial";
+    boton.title = arcano.texto;
+
+    const img = document.createElement("img");
+    img.src = bjTarotImagen(arcano);
+    img.alt = "";
+    boton.appendChild(img);
+
+    // Algunas acciones enseñan cartas dentro del botón (los Enamorados de Futuro:
+    // la mano alternativa entre la miniatura del arcano y la etiqueta).
+    if (entrada.cartas) {
+      entrada.cartas(ctx).forEach((carta) => {
+        const mini = bjCrearCartaImg(carta, false);
+        boton.appendChild(mini);
+      });
+    }
+
+    const texto = document.createElement("span");
+    texto.textContent = eligiendo ? "Toca la carta a cambiar…" : entrada.etiqueta;
+    boton.appendChild(texto);
+
+    boton.addEventListener("click", () => {
+      // Se reevalúa al pulsar: el estado puede haber cambiado desde el pintado.
+      const ahora = bjArcadeCtx();
+      if (!bjArcadeEspecialUsable(entrada, ahora)) return;
+      // Modo «elige una carta» (el Mago / los Enamorados): el uso NO se marca
+      // aquí sino al completar la selección (bjArcadeRenderManos).
+      if (entrada.eligeCarta) {
+        bjArcadeElegirCarta(ahora, entrada);
+        return;
+      }
+      bjArcade.eligiendo = null; // otra acción cancela el modo «elige una carta»
+      if (entrada.unaVez === "partida") ahora.jugador.arcanosUsados[entrada.efecto] = true;
+      if (entrada.unaVez === "ronda") ahora.ronda.arcanosUsados[entrada.efecto] = true;
+      entrada.usar(ahora); // repinta la mesa o avanza el turno, según el efecto
+    });
+
+    cont.appendChild(boton);
+  });
+
+  cont.hidden = cont.children.length === 0;
+}
+
+// La Sacerdotisa: pinta (o esconde) la carta superior del mazo. La ven todos en la
+// última ronda (Futuro normal) o quien haya gastado su espiada del Pasado normal
+// (`ronda.espiando`, que se apaga al robar la siguiente carta).
+function bjArcadeRenderProxima() {
+  const c = bjArcade;
+  const cont = document.getElementById("bj-arcade-proxima");
+  const ronda = bjArcadeRondaActual();
+  const carta = c.mazo[c.mazo.length - 1]; // bjRobar saca por el final: esa es la próxima
+  const ver = bjTarotAplica("sacerdotisa-fu-n") || (ronda && ronda.espiando);
+  if (!ver || !carta) {
+    cont.hidden = true;
+    return;
+  }
+  const zona = document.getElementById("bj-arcade-proxima-carta");
+  zona.innerHTML = "";
+  const img = bjCrearCartaImg(carta, false);
+  img.classList.add("bj-sin-entrada");
+  zona.appendChild(img);
+  cont.hidden = false;
+}
+
+// Pinta la(s) mano(s) del jugador de turno (una, o dos al dividir). La Luna tapa la
+// 2.ª carta (se pinta el reverso y el total lleva "+?"); las cartas que cuentan 0
+// (la Rueda invertida) se atenúan con .bj-carta-cero para que se vean de un vistazo.
 function bjArcadeRenderManos() {
   const ronda = bjArcadeRondaActual();
   const cont = document.getElementById("bj-arcade-manos");
   cont.innerHTML = "";
   const split = ronda.manos.length > 1;
+  const mod = bjArcadeModActual();
+  // Con la 2.ª tapada no hay split posible, así que la carta oculta es siempre la
+  // cartas[1] de la única mano.
+  const tapada = bjArcadeSegundaTapada(bjArcadeIndiceActual());
 
   ronda.manos.forEach((mano, indice) => {
     const bloque = document.createElement("div");
@@ -1409,14 +2114,50 @@ function bjArcadeRenderManos() {
     cartas.className = "bj-cartas";
     // Reparto inicial con entrada simple; cada carta pedida/doblada después, con
     // volteo reverso→frente (bjPintarCartasMano lleva la cuenta en mano.mostradas).
-    bjPintarCartasMano(cartas, mano);
+    // Una mano a ciegas (el Loco invertido) va entera boca abajo; con la Luna solo
+    // se tapa la 2.ª carta.
+    const ocultas = mano.aCiegas ? () => true : tapada ? (idx) => idx === 1 : null;
+    bjPintarCartasMano(cartas, mano, ocultas);
+    if (mod && mod.valorCero && !mano.aCiegas) {
+      Array.from(cartas.children).forEach((img, idx) => {
+        // La tapada no se señala aunque cuente 0: delataría qué carta es.
+        if (!(tapada && idx === 1) && mod.valorCero(mano.cartas[idx])) {
+          img.classList.add("bj-carta-cero");
+        }
+      });
+    }
+
+    // Modo «elige una carta» (el Mago / los Enamorados): las cartas elegibles de la
+    // mano ACTIVA se vuelven pulsables; al tocar una se gasta el uso y se cambia.
+    const eligiendo = bjArcade.eligiendo;
+    if (eligiendo && indice === ronda.manoActiva) {
+      Array.from(cartas.children).forEach((img, idx) => {
+        if (eligiendo.indices.indexOf(idx) === -1) return;
+        img.classList.add("bj-carta-elegible");
+        img.addEventListener("click", () => {
+          const ctx = bjArcadeCtx();
+          bjArcade.eligiendo = null;
+          if (eligiendo.unaVez === "partida") ctx.jugador.arcanosUsados[eligiendo.efecto] = true;
+          if (eligiendo.unaVez === "ronda") ctx.ronda.arcanosUsados[eligiendo.efecto] = true;
+          bjArcadeCambiarCarta(ctx, idx);
+        });
+      });
+    }
     bloque.appendChild(cartas);
 
     const info = document.createElement("div");
     info.className = "bj-mano-info";
     const total = document.createElement("span");
-    total.className = "bj-total" + (bjEsBust(mano.cartas) ? " bj-total-bust" : "");
-    total.textContent = bjValorMano(mano.cartas);
+    if (mano.aCiegas) {
+      total.className = "bj-total";
+      total.textContent = "?";
+    } else if (tapada) {
+      total.className = "bj-total";
+      total.textContent = bjArcadeTotalConTapada(mano.cartas, mod);
+    } else {
+      total.className = "bj-total" + (bjEsBust(mano.cartas, mod) ? " bj-total-bust" : "");
+      total.textContent = bjValorMano(mano.cartas, mod);
+    }
     info.appendChild(total);
     if (split) {
       const apuesta = document.createElement("span");
@@ -1464,7 +2205,7 @@ function bjArcadeRenderRonda() {
     detalle.className = "bj-ronda-detalle";
     const trozos = [`Apostó 🪙${bjFormatearFichas(ronda.apuesta)}`];
     if (ronda.mult && ronda.mult !== 1) trozos.push(bjArcadeTextoMult(ronda.mult));
-    trozos.push(bjArcadeResumenManos(ronda.manos));
+    trozos.push(bjArcadeResumenManos(ronda.manos, bjArcadeMod(i)));
     detalle.textContent = trozos.join(" · ");
     izq.append(nombre, detalle);
 
@@ -1547,11 +2288,12 @@ function bjArcadeTragosDeRonda() {
     const jugador = c.jugadores[i];
     const nombre = jugador.nombre;
     const delta = jugador.pila - ronda.pilaInicio;
-    const sePaso = ronda.manos.some((mano) => bjEsBust(mano.cartas));
+    const mod = bjArcadeMod(i);
+    const sePaso = ronda.manos.some((mano) => bjEsBust(mano.cartas, mod));
     const natural =
       ronda.manos.length === 1 &&
       ronda.manos[0].resultado === "jugador" &&
-      bjEsBlackjackNatural(ronda.manos[0].cartas);
+      bjEsBlackjackNatural(ronda.manos[0].cartas, mod);
 
     if (natural) frases.push(`${nombre} hizo blackjack natural: reparte 3 tragos.`);
     if (sePaso) frases.push(`${nombre} se pasó: bebe 1 trago.`);
@@ -1564,10 +2306,12 @@ function bjArcadeTragosDeRonda() {
 }
 
 // Resumen textual de las manos de un jugador: "18✓ · 22✗" (total + símbolo).
-function bjArcadeResumenManos(manos) {
+// `mod`: el modificador de valor de ese jugador (Estrella / Rueda invertida), para
+// que el total mostrado sea el mismo con el que se resolvió la mano.
+function bjArcadeResumenManos(manos, mod) {
   const simbolos = { jugador: "✓", dealer: "✗", empate: "=", rendido: "🏳️" };
   return manos
-    .map((mano) => bjValorMano(mano.cartas) + (simbolos[mano.resultado] || ""))
+    .map((mano) => bjValorMano(mano.cartas, mod) + (simbolos[mano.resultado] || ""))
     .join(" · ");
 }
 

@@ -818,6 +818,19 @@
         <button type="button" class="bj-accion-rendirse" id="bj-arcade-btn-rendirse" aria-label="Rendirse" title="Rendirse">R</button>
       </div>
 
+      <!-- Acciones especiales del tarot (Fase 9.5): un botón por arcano que el
+           jugador de turno puede usar AHORA MISMO, con la miniatura de su carta
+           y una etiqueta. Lo rellena bjArcadeRenderEspeciales; oculto si no hay
+           ninguno usable en este momento. -->
+      <div class="bj-especiales" id="bj-arcade-especiales" hidden></div>
+
+      <!-- La Sacerdotisa: la carta superior del mazo, visible solo cuando un
+           arcano deja espiarla (bjArcadeRenderProxima). -->
+      <div class="bj-proxima" id="bj-arcade-proxima" hidden>
+        <span>Próxima carta del mazo</span>
+        <div class="bj-cartas" id="bj-arcade-proxima-carta"></div>
+      </div>
+
       <!-- Chip que despliega las reglas de mesa del tarot (mismo patrón que el
            chip «Efectos» de Cartas de la Fortuna). El overlay se cierra tocando
            en cualquier parte; lo rellena bjTarotConectarPanel. -->

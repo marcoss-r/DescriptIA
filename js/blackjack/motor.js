@@ -104,19 +104,47 @@ function bjRepartirInicial(mazo) {
 
 // Valor de una mano contando el as como 11 salvo que eso pase de 21, en cuyo caso
 // baja a 1 (−10) tantos ases como haga falta. Devuelve el mejor total posible.
-function bjValorMano(mano) {
+//
+// `mod` (opcional) retuerce la cuenta para los arcanos del Arcade; sin él, la
+// cuenta es la estándar de casino:
+//   - valoresAs: escala de valores que puede tomar un as, de MAYOR a MENOR
+//     ([11, 1] estándar; la Estrella la cambia a [12, 1], [12, 11, 1], [11],
+//     [1] o [0]). Cada as entra por lo alto y, mientras la mano se pase, se va
+//     rebajando un as al siguiente peldaño de la escala.
+//   - valorCero(carta): true si esa carta cuenta como 0 esta ronda (la Rueda
+//     invertida). Un as a 0 tampoco entra en el ajuste de la escala.
+//   - transformarTotal(total): retoque final sobre el total ya ajustado (la
+//     Muerte normal «resucita» un bust haciéndolo contar 12). Como se aplica al
+//     total, también decide bjEsBust: un total transformado a ≤21 no es bust.
+function bjValorMano(mano, mod) {
+  const valoresAs = (mod && mod.valoresAs) || [11, 1];
   let total = 0;
-  let ases = 0;
+  const nivelesAs = []; // peldaño actual (índice en valoresAs) de cada as de la mano
   for (const carta of mano) {
-    if (carta.valor === "A") ases++;
-    total += bjValorCarta(carta.valor);
+    if (mod && mod.valorCero && mod.valorCero(carta)) continue; // cuenta como 0
+    if (carta.valor === "A") {
+      nivelesAs.push(0);
+      total += valoresAs[0];
+    } else {
+      total += bjValorCarta(carta.valor);
+    }
   }
-  // Cada as vale 11 de entrada; mientras nos pasemos y quede algún as "a 11", lo
-  // rebajamos a 1. Al acabar, `total` es el mayor valor que no se pasa (si existe).
-  while (total > 21 && ases > 0) {
-    total -= 10;
-    ases--;
+  // Mientras nos pasemos y quede algún as rebajable, se baja UN as UN peldaño de la
+  // escala y se reevalúa. Al acabar, `total` es el mayor valor que no se pasa (si
+  // existe); con la escala estándar [11, 1] esto es el clásico 11 → 1 (−10).
+  let rebajado = true;
+  while (total > 21 && rebajado) {
+    rebajado = false;
+    for (let i = 0; i < nivelesAs.length; i++) {
+      if (nivelesAs[i] < valoresAs.length - 1) {
+        total -= valoresAs[nivelesAs[i]] - valoresAs[nivelesAs[i] + 1];
+        nivelesAs[i]++;
+        rebajado = true;
+        break;
+      }
+    }
   }
+  if (mod && mod.transformarTotal) total = mod.transformarTotal(total);
   return total;
 }
 
@@ -136,13 +164,15 @@ function bjManoEsBlanda(mano) {
 }
 
 // Blackjack NATURAL: 21 con exactamente las dos primeras cartas (as + 10/figura).
-function bjEsBlackjackNatural(mano) {
-  return mano.length === 2 && bjValorMano(mano) === 21;
+// `mod` retuerce el valor de las cartas (ver bjValorMano): con la Estrella o la
+// Rueda invertida activas, un as+figura puede dejar de sumar 21 (y no ser natural).
+function bjEsBlackjackNatural(mano, mod) {
+  return mano.length === 2 && bjValorMano(mano, mod) === 21;
 }
 
-// ¿La mano se ha pasado de 21? (bust: pierde de inmediato).
-function bjEsBust(mano) {
-  return bjValorMano(mano) > 21;
+// ¿La mano se ha pasado de 21? (bust: pierde de inmediato). `mod`: ver bjValorMano.
+function bjEsBust(mano, mod) {
+  return bjValorMano(mano, mod) > 21;
 }
 
 // ============================================================
@@ -203,14 +233,18 @@ function bjResolverEmpate(empate) {
 //   - jugadorPuedeNatural: por defecto true; ponlo a false para una mano que NO
 //     puede ser blackjack natural aunque sume 21 con 2 cartas (una mano dividida:
 //     un 21 tras split paga 1:1, no 3:2).
+//   - modJugador: modificador de valor de las cartas del JUGADOR (ver bjValorMano;
+//     la Estrella y la Rueda invertida). El dealer cuenta SIEMPRE con los valores
+//     estándar: estos arcanos retuercen la suerte de los jugadores, no la banca.
 function bjResolverMano(manoJugador, manoDealer, opciones = {}) {
   const pagoNatural = opciones.pagoNatural != null ? opciones.pagoNatural : 1.5;
   const empate = opciones.empate || "empate";
   const permitirNatural = opciones.jugadorPuedeNatural !== false;
+  const modJugador = opciones.modJugador || null;
 
-  const valorJ = bjValorMano(manoJugador);
+  const valorJ = bjValorMano(manoJugador, modJugador);
   const valorD = bjValorMano(manoDealer);
-  const naturalJ = permitirNatural && bjEsBlackjackNatural(manoJugador);
+  const naturalJ = permitirNatural && bjEsBlackjackNatural(manoJugador, modJugador);
   const naturalD = bjEsBlackjackNatural(manoDealer);
 
   // 1. El jugador se pasa: pierde siempre, aunque el dealer también se pase.

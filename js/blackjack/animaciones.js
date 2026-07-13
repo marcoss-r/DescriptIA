@@ -72,19 +72,22 @@ function bjProgramarVolteo(img, carta, retardoMs) {
 // (pedir, doblar, la 2.ª de una mano dividida) se revela con el volteo reverso→frente.
 // Las cartas ya vistas se repintan SIN animación, para que no "salten" cada vez que se
 // repinta la mano entera (que es lo que hacen las mesas en cada acción del jugador).
-function bjPintarCartasMano(contenedor, mano) {
+// `estaOculta(idx)` (opcional) marca qué cartas se pintan BOCA ABAJO (la Luna del
+// Arcade reparte la 2.ª carta del jugador tapada): esas enseñan el reverso siempre.
+function bjPintarCartasMano(contenedor, mano, estaOculta) {
   const yaMostradas = mano.mostradas || 0;
   const esPrimeraVez = yaMostradas === 0;
   mano.cartas.forEach((carta, idx) => {
+    const oculta = estaOculta ? estaOculta(idx) : false;
     if (idx < yaMostradas) {
-      const img = bjCrearCartaImg(carta, false);
+      const img = bjCrearCartaImg(carta, oculta);
       img.classList.add("bj-sin-entrada"); // carta ya vista: no reanimar al repintar
       contenedor.appendChild(img);
     } else if (esPrimeraVez) {
-      contenedor.appendChild(bjCrearCartaImg(carta, false)); // reparto inicial: entrada simple
+      contenedor.appendChild(bjCrearCartaImg(carta, oculta)); // reparto inicial: entrada simple
     } else {
       contenedor.appendChild(
-        bjCrearCartaVolteada(carta, false, (idx - yaMostradas) * BJ_VOLTEO_ESCALON_MS)
+        bjCrearCartaVolteada(carta, oculta, (idx - yaMostradas) * BJ_VOLTEO_ESCALON_MS)
       );
     }
   });
