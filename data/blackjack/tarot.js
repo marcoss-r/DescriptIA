@@ -260,7 +260,7 @@ const BJ_TAROT = [
     numeral: "XIII", nombre: "La Muerte", slug: "muerte",
     posiciones: {
       pasado: {
-        normal: { efecto: "muerte-pa-n", texto: "Cada vez que un jugador se pasa, su apuesta mínima se reduce a la mitad en su siguiente mano.", fiesta: "Quien se pase, bebe 1 trago." },
+        normal: { efecto: "muerte-pa-n", texto: "Cada vez que un jugador se pasa, su apuesta mínima baja 1 ficha en su siguiente mano (4, luego 3…).", fiesta: "Quien se pase, bebe 1 trago." },
         invertida: { efecto: "muerte-pa-i", texto: "Cada vez que un jugador se pasa, su siguiente apuesta queda fijada a la mínima.", fiesta: "Si te pasas, bebe 1 trago." },
       },
       presente: {

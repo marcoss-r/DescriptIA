@@ -223,6 +223,7 @@ function bjArcadeEmpezar() {
     ganoSinPedir: false,  // La Sacerdotisa (Pasado): ganaste sin pedir cartas
     naturalPrevio: false, // El Mago (Pasado): hiciste blackjack la ronda anterior
     veintiunos: 0,        // El Mundo (Futuro): cuenta de 21 exactos de la partida
+    muerteDescuento: 0,   // La Muerte (Pasado): −1 de mínima por cada bust acumulado
   }));
 
   // Banderas de mesa que encienden los arcanos de Pasado a mitad de partida.
@@ -375,10 +376,14 @@ function bjArcadeLimitesApuesta(jugador) {
     notas.push("Ganaste la ronda anterior: apuesta al menos el doble de la mínima.");
   }
 
-  // La Muerte normal (Pasado): tras pasarte, tu mínima se reduce a la mitad.
+  // La Muerte normal (Pasado): tras pasarte, tu mínima baja 1 ficha por cada bust
+  // acumulado (5→4, y a 3 si te vuelves a pasar…), sin bajar nunca de 1. Antes se
+  // reducía «a la mitad», pero redondeada al múltiplo de 5 nunca bajaba de la mínima
+  // base; con el descuento de 1 el efecto se nota de verdad (el stepper vuelve a los
+  // múltiplos de 5 al subir: 4, 5, 10, 15…; ver bjArcadeCambiarApuesta).
   if (bjTarotAplica("muerte-pa-n") && jugador.bustPrevio) {
-    min = Math.max(BJ_APUESTA_PASO, Math.ceil(min / 2 / BJ_APUESTA_PASO) * BJ_APUESTA_PASO);
-    notas.push("Te pasaste la ronda anterior: tu apuesta mínima baja a la mitad.");
+    min = Math.max(1, min - (jugador.muerteDescuento || 0));
+    notas.push(`Te pasaste la ronda anterior: tu apuesta mínima baja a ${min}.`);
   }
 
   // El Juicio invertido (Futuro): en la última ronda, al menos la mitad de tu pila.
@@ -477,10 +482,22 @@ function bjArcadeMostrarApuesta() {
 
 // Sube/baja la apuesta, acotada entre los límites calculados al entrar (mínima
 // efectiva y pila/tope de los arcanos; en deuda queda bloqueada en la mínima).
+// Se mueve por múltiplos del paso (5, 10, 15…); una mínima que no sea múltiplo
+// (la Muerte la deja en 4, 3… y el Juicio en media pila) no rompe la escala: al
+// subir desde ella se salta al siguiente múltiplo (4 → 5 → 10) y al bajar del
+// primer múltiplo alcanzable se cae de vuelta a esa mínima.
 function bjArcadeCambiarApuesta(paso) {
-  const nueva = bjArcade.apuestaActual + paso * BJ_APUESTA_PASO;
-  if (nueva < bjArcade.apuestaMin || nueva > bjArcade.apuestaMax) return;
-  bjArcade.apuestaActual = nueva;
+  const c = bjArcade;
+  const actual = c.apuestaActual;
+  let nueva;
+  if (paso > 0) {
+    nueva = Math.floor(actual / BJ_APUESTA_PASO + 1) * BJ_APUESTA_PASO;
+  } else {
+    nueva = Math.ceil(actual / BJ_APUESTA_PASO - 1) * BJ_APUESTA_PASO;
+    if (nueva < c.apuestaMin) nueva = c.apuestaMin;
+  }
+  if (nueva === actual || nueva < c.apuestaMin || nueva > c.apuestaMax) return;
+  c.apuestaActual = nueva;
   bjArcadeActualizarApuestaStepper();
 }
 
@@ -1582,6 +1599,9 @@ function bjArcadeAjustesDeRonda() {
     // --- Recargos permanentes sobre la apuesta mínima ---
     // El Loco invertido (Pasado): cada vez que te pasas, +5 de mínima el resto de la partida.
     if (sePaso && bjTarotAplica("loco-pa-i")) jugador.recargoMin += BJ_APUESTA_PASO;
+    // La Muerte normal (Pasado): cada bust rebaja 1 ficha más la mínima que tendrás
+    // en la ronda siguiente a pasarte (5→4, y a 3 con el segundo bust…).
+    if (sePaso && bjTarotAplica("muerte-pa-n")) jugador.muerteDescuento++;
     // La Templanza invertida (Pasado): plantarte con la mano inicial cuesta +5 de mínima.
     if (bjTarotAplica("templanza-pa-i") &&
         ronda.manos.some((mano) => !mano.rendido && !bjEsBust(mano.cartas, mod) && mano.cartas.length === 2)) {
