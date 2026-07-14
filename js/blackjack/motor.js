@@ -187,10 +187,13 @@ function bjEsBust(mano, mod) {
 //     baja a 16 o lo sube a 18).
 //   - dealerRobaBlando17: si es true, con 17 blando (as contando 11) sigue robando
 //     en vez de plantarse (variante de casino). Por defecto false (se planta en 17).
+//   - modDealer: modificador de valor de las cartas del DEALER (ver bjValorMano;
+//     la Rueda invertida anula el valor sorteado también en su mano). Sin él,
+//     cuenta estándar.
 function bjJugarDealer(mano, mazo, opciones = {}) {
   const limite = opciones.limiteDealer != null ? opciones.limiteDealer : 17;
   while (true) {
-    const valor = bjValorMano(mano);
+    const valor = bjValorMano(mano, opciones.modDealer);
     if (valor > limite) break;
     if (valor === limite) {
       // Justo en el límite: se planta, salvo la variante de robar con blando 17.
@@ -234,18 +237,22 @@ function bjResolverEmpate(empate) {
 //     puede ser blackjack natural aunque sume 21 con 2 cartas (una mano dividida:
 //     un 21 tras split paga 1:1, no 3:2).
 //   - modJugador: modificador de valor de las cartas del JUGADOR (ver bjValorMano;
-//     la Estrella y la Rueda invertida). El dealer cuenta SIEMPRE con los valores
-//     estándar: estos arcanos retuercen la suerte de los jugadores, no la banca.
+//     la Estrella y la Rueda invertida).
+//   - modDealer: modificador de valor de las cartas del DEALER. Solo lo usa el
+//     valor sorteado a 0 de la Rueda invertida (que anula ese valor para TODA la
+//     mesa); el resto de arcanos (Estrella, Muerte, carta a 0 por jugador)
+//     retuercen la suerte de los jugadores, no la banca.
 function bjResolverMano(manoJugador, manoDealer, opciones = {}) {
   const pagoNatural = opciones.pagoNatural != null ? opciones.pagoNatural : 1.5;
   const empate = opciones.empate || "empate";
   const permitirNatural = opciones.jugadorPuedeNatural !== false;
   const modJugador = opciones.modJugador || null;
+  const modDealer = opciones.modDealer || null;
 
   const valorJ = bjValorMano(manoJugador, modJugador);
-  const valorD = bjValorMano(manoDealer);
+  const valorD = bjValorMano(manoDealer, modDealer);
   const naturalJ = permitirNatural && bjEsBlackjackNatural(manoJugador, modJugador);
-  const naturalD = bjEsBlackjackNatural(manoDealer);
+  const naturalD = bjEsBlackjackNatural(manoDealer, modDealer);
 
   // 1. El jugador se pasa: pierde siempre, aunque el dealer también se pase.
   if (valorJ > 21) return bjResultado("dealer", -1);

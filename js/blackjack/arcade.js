@@ -429,9 +429,9 @@ function bjArcadeNotasCartas(jugador) {
   const ronda = bjArcadeRondaActual();
   const notas = [];
   if (c.valoresCero.length === 1) {
-    notas.push(`Esta ronda las cartas de valor ${c.valoresCero[0]} cuentan como 0.`);
+    notas.push(`Esta ronda las cartas de valor ${c.valoresCero[0]} cuentan como 0 (también para el dealer).`);
   } else if (c.valoresCero.length > 1) {
-    notas.push(`Esta ronda las cartas de valor ${c.valoresCero.join(" y ")} cuentan como 0.`);
+    notas.push(`Esta ronda las cartas de valor ${c.valoresCero.join(" y ")} cuentan como 0 (también para el dealer).`);
   }
   if (ronda.cartaCero) {
     notas.push("Perdiste la ronda anterior: una de tus cartas iniciales cuenta como 0.");
@@ -1198,8 +1198,10 @@ function bjArcadeLideraVictorias(jugador) {
 // La Estrella y la Rueda invertida cambian cuánto SUMAN las cartas de los
 // jugadores. El motor lo soporta con el parámetro `mod` de bjValorMano /
 // bjEsBust / bjEsBlackjackNatural (y `opciones.modJugador` de bjResolverMano);
-// aquí se construye ese modificador según la tirada. El dealer cuenta SIEMPRE
-// con los valores estándar: los arcanos retuercen la suerte de los jugadores.
+// aquí se construye ese modificador según la tirada. El dealer cuenta con los
+// valores estándar SALVO el valor sorteado a 0 de la Rueda invertida, que anula
+// ese valor para TODA la mesa (bjArcadeModDealer); el resto de arcanos (Estrella,
+// Muerte, carta a 0 por jugador) retuercen la suerte de los jugadores, no la banca.
 
 // Sortea `n` valores de carta distintos (la Rueda invertida los pone a 0).
 function bjArcadeSortearValores(n) {
@@ -1256,6 +1258,16 @@ function bjArcadeModActual() {
   return bjArcadeMod(bjArcadeIndiceActual());
 }
 
+// Modificador del DEALER: el valor sorteado a 0 de la Rueda invertida cuenta 0
+// también en su mano (la carta a 0 por jugador de la posición Pasado y los mods
+// de la Estrella/Muerte siguen siendo solo de los jugadores). Va en
+// `opciones.modDealer` del motor y en los totales/pintado de la mano del dealer.
+function bjArcadeModDealer() {
+  const c = bjArcade;
+  if (!c.valoresCero || c.valoresCero.length === 0) return null;
+  return { valorCero: (carta) => c.valoresCero.indexOf(carta.valor) !== -1 };
+}
+
 // ¿Juega este jugador con su SEGUNDA carta boca abajo? La Luna normal la tapa a
 // todos (Presente toda la partida, Futuro solo la última ronda); la invertida en
 // Pasado, solo a quien viene de perder. Mientras esté tapada, el jugador no la ve
@@ -1291,6 +1303,9 @@ function bjArcadeResolverRonda() {
   c.dealerOculta = false;
   c.magoDealerCambio = false; // ¿ha cambiado el dealer una carta ESTA ronda? (Mago inv.)
   const opciones = bjTarotOpcionesMotor();
+  // La Rueda invertida: el valor sorteado a 0 también anula las cartas del dealer
+  // (su turno y la comparación de manos cuentan con este modificador).
+  opciones.modDealer = bjArcadeModDealer();
 
   // La Torre en posición Pasado retoca el límite del dealer SOLO en esta ronda:
   // normal, tras haber arrasado se ablanda a 16; invertida, si alguien ha logrado 21
@@ -1307,7 +1322,7 @@ function bjArcadeResolverRonda() {
     // El Mago invertido (Presente): una vez por partida, si la mano final del
     // dealer suma 17 justo, cambia su peor carta (la más baja) por otra del mazo
     // y termina su turno con la mano nueva (puede mejorar… o pasarse).
-    if (bjTarotAplica("mago-pr-i") && !c.magoDealerUso && bjValorMano(c.manoDealer) === 17) {
+    if (bjTarotAplica("mago-pr-i") && !c.magoDealerUso && bjValorMano(c.manoDealer, opciones.modDealer) === 17) {
       c.magoDealerUso = true;
       const nueva = bjRobar(c.mazo);
       if (nueva) {
@@ -1503,7 +1518,7 @@ function bjArcadeAjustesDeRonda() {
 
   // Delta de cada jugador ANTES de bonus/trasvases: define ganadores y perdedores.
   const deltas = c.jugadores.map((jugador, i) => jugador.pila - c.jugadoresRonda[i].pilaInicio);
-  const dealerNatural = bjEsBlackjackNatural(c.manoDealer);
+  const dealerNatural = bjEsBlackjackNatural(c.manoDealer, bjArcadeModDealer());
   const ultima = bjTarotEsUltimaRonda();
   const todosGanaron = deltas.every((delta) => delta > 0);
   const dealerArraso = deltas.every((delta) => delta < 0);
@@ -1951,8 +1966,14 @@ function bjArcadeRenderUpcard(idContenedor) {
   const cont = document.getElementById(idContenedor);
   cont.innerHTML = "";
   if (bjArcade.manoDealer.length) {
+    const carta = bjArcade.manoDealer[0];
     const tapada = bjArcadeTapaVisible(bjArcadeJugadorActual());
-    cont.appendChild(bjCrearCartaImg(bjArcade.manoDealer[0], tapada));
+    const img = bjCrearCartaImg(carta, tapada);
+    // La Rueda invertida: si la visible es del valor a 0, se ve atenuada (a él
+    // también le cuenta 0: conviene saberlo antes de apostar).
+    const modDealer = bjArcadeModDealer();
+    if (!tapada && modDealer && modDealer.valorCero(carta)) img.classList.add("bj-carta-cero");
+    cont.appendChild(img);
   }
 }
 
@@ -1980,15 +2001,18 @@ function bjArcadeRenderMesa() {
   // jugador, así que un volteo se repetiría en cada "pedir". El revelado con giro se
   // reserva para la resolución de la ronda (bjArcadeRenderRonda).
   const contDealer = document.getElementById("bj-arcade-cartas-dealer");
+  const modDealer = bjArcadeModDealer(); // la Rueda inv.: valor a 0 también para él
   contDealer.innerHTML = "";
   c.manoDealer.forEach((carta, indice) => {
     const esUltima = indice === c.manoDealer.length - 1;
     const oculta = esUltima ? !veOculta : tapaVisible;
-    contDealer.appendChild(bjCrearCartaImg(carta, oculta));
+    const img = bjCrearCartaImg(carta, oculta);
+    if (!oculta && modDealer && modDealer.valorCero(carta)) img.classList.add("bj-carta-cero");
+    contDealer.appendChild(img);
   });
   document.getElementById("bj-arcade-total-dealer").textContent = tapaVisible
     ? "?"
-    : veOculta ? bjValorMano(c.manoDealer) : bjValorMano([c.manoDealer[0]]);
+    : veOculta ? bjValorMano(c.manoDealer, modDealer) : bjValorMano([c.manoDealer[0]], modDealer);
 
   bjArcadeRenderMesaJugadores();
   // El total de la mano activa se refresca al terminar el volteo, no antes (ver
@@ -2306,11 +2330,14 @@ function bjArcadeRenderRonda() {
   // La mano final del dealer se revela entera con volteo escalonado (Fase 9.1):
   // es un repintado único por ronda, así que no hace falta compararlo con nada.
   const contDealer = document.getElementById("bj-ronda-cartas-dealer");
+  const modDealer = bjArcadeModDealer(); // la Rueda inv.: valor a 0 también para él
   contDealer.innerHTML = "";
-  c.manoDealer.forEach((carta, indice) =>
-    contDealer.appendChild(bjCrearCartaVolteada(carta, false, indice * BJ_VOLTEO_ESCALON_MS))
-  );
-  document.getElementById("bj-ronda-total-dealer").textContent = bjValorMano(c.manoDealer);
+  c.manoDealer.forEach((carta, indice) => {
+    const img = bjCrearCartaVolteada(carta, false, indice * BJ_VOLTEO_ESCALON_MS);
+    if (modDealer && modDealer.valorCero(carta)) img.classList.add("bj-carta-cero");
+    contDealer.appendChild(img);
+  });
+  document.getElementById("bj-ronda-total-dealer").textContent = bjValorMano(c.manoDealer, modDealer);
 
   const cont = document.getElementById("bj-ronda-jugadores");
   cont.innerHTML = "";
@@ -2399,12 +2426,13 @@ function bjArcadeUsoAsAlto(ronda, mod, valor) {
 // son el rastro de la ronda ANTERIOR (aún sin pisar).
 function bjArcadeHechosRonda() {
   const c = bjArcade;
-  const totalDealer = bjValorMano(c.manoDealer);
+  const modDealer = bjArcadeModDealer(); // la Rueda inv.: valor a 0 también para él
+  const totalDealer = bjValorMano(c.manoDealer, modDealer);
   const deltas = c.jugadores.map((jugador, i) => jugador.pila - c.jugadoresRonda[i].pilaInicio);
 
   const mesa = {
     deltas,
-    dealerNatural: bjEsBlackjackNatural(c.manoDealer),
+    dealerNatural: bjEsBlackjackNatural(c.manoDealer, modDealer),
     dealerSePaso: totalDealer > 21,
     totalDealer,
     dealerArraso: deltas.every((delta) => delta < 0),

@@ -214,11 +214,11 @@ const BJ_TAROT = [
       },
       presente: {
         normal: { efecto: "rueda-pr-n", texto: "Al empezar cada ronda se sortea un multiplicador ×0,5–×3 sobre las ganancias de esa ronda.", fiesta: "Si el multiplicador de la ronda es ×2 o más, quien gane reparte 1 trago." },
-        invertida: { efecto: "rueda-pr-i", texto: "Al empezar cada ronda se sortea un valor de carta que cuenta como 0 esa ronda.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
+        invertida: { efecto: "rueda-pr-i", texto: "Al empezar cada ronda se sortea un valor de carta que cuenta como 0 esa ronda, también para el dealer.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
       },
       futuro: {
         normal: { efecto: "rueda-fu-n", texto: "En la última ronda, el multiplicador sorteado puede llegar a ×5.", fiesta: "Si el multiplicador es ×3 o más, quien gane reparte 2 tragos." },
-        invertida: { efecto: "rueda-fu-i", texto: "En la última ronda, dos valores de carta al azar cuentan como 0.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
+        invertida: { efecto: "rueda-fu-i", texto: "En la última ronda, dos valores de carta al azar cuentan como 0, también para el dealer.", fiesta: "Quien tenga una carta a 0, bebe 1 trago." },
       },
     },
   },

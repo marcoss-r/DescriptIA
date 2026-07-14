@@ -1762,6 +1762,14 @@ button.secundario:hover {
   font-size: 0.8rem;
   color: var(--color-texto-tenue);
 }
+/* Un display de autor (flex) gana al [hidden] del navegador (mismo caso que
+   .bj-controles[hidden]): sin esto, «Próxima carta del mazo», la barra de
+   rivales y las acciones especiales se verían siempre aunque estén ocultas. */
+.bj-proxima[hidden],
+.bj-mesa-jugadores[hidden],
+.bj-especiales[hidden] {
+  display: none;
+}
 .bj-proxima .bj-cartas img {
   width: 40px;
 }
