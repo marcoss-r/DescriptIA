@@ -139,11 +139,11 @@ function ztIrAVotacion() {
   document.getElementById("zt-dia-ayuda").textContent =
     recordatorio +
     "Votad a mano alzada y registrad aquí el resultado. Quien es pisoturista hoy no vota.";
-  // Lista de vivos CON voto (§4.3: el pisoturista de hoy queda fuera).
-  ztPintarLista(
-    "zt-dia-lista",
-    ztIndicesVivos((j) => !j.sinVotoHoy),
-    (i) => ztRegistrarExpulsion(i)
+  // Lista de candidatos a EXPULSIÓN: todos los vivos. El pisoturista pierde su
+  // voto (§4.3), pero sigue pudiendo ser expulsado; si quedara fuera de esta
+  // lista, un buitre señalado por la Plataforma sería inexpulsable.
+  ztPintarLista("zt-dia-lista", ztIndicesVivos(), (i) =>
+    ztRegistrarExpulsion(i)
   );
   ztBotonDia("Nadie ha sido expulsado", () => ztRegistrarExpulsion(null), true);
 }
